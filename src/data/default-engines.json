@@ -10,5 +10,29 @@
     "imageExtensions": [".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"],
     "isDefault": true,
     "avatarUrl": "https://github.com/dharmx.png"
+  },
+  {
+    "id": "mylinuxforwork-wallpaper",
+    "name": "mylinuxforwork/wallpaper",
+    "repoOwner": "mylinuxforwork",
+    "repoName": "wallpaper",
+    "branch": "main",
+    "treeSha": "d7ba4aabe6df8f61ecdbd3952bc1aa41f3c6f5f0",
+    "excludedFolders": [],
+    "imageExtensions": [".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"],
+    "isDefault": true,
+    "avatarUrl": "https://github.com/mylinuxforwork.png"
+  },
+  {
+    "id": "d3ext-aesthetic-wallpapers",
+    "name": "D3Ext/aesthetic-wallpapers",
+    "repoOwner": "D3Ext",
+    "repoName": "aesthetic-wallpapers",
+    "branch": "main",
+    "treeSha": "e34f05935c5b768f4c016b0893924d18ec1dba61",
+    "excludedFolders": [".github", "assets", "pages"],
+    "imageExtensions": [".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"],
+    "isDefault": true,
+    "avatarUrl": "https://github.com/D3Ext.png"
   }
 ]
