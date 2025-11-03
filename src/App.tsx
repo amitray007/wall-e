@@ -3,15 +3,19 @@ import type { WallpaperImage, Category } from './types';
 import { getAllImages, getCategories } from './lib/github-api';
 import { useTheme } from './hooks/useTheme';
 import { useInfiniteScroll } from './hooks/useInfiniteScroll';
+import { useEngine } from './contexts/EngineContext';
 import { Sidebar } from './components/Sidebar';
 import { SearchBar } from './components/SearchBar';
 import { VirtualMasonryGallery } from './components/VirtualMasonryGallery';
 import { OptimizedImageModal } from './components/OptimizedImageModal';
 import { InfiniteScrollTrigger } from './components/InfiniteScrollTrigger';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { EnginesModal } from './components/EnginesModal';
+import { Loader2, AlertCircle, Settings } from 'lucide-react';
+import { Button } from './components/Button';
 
 function App() {
   const { theme, toggleTheme } = useTheme();
+  const { activeEngine } = useEngine();
   const [allImages, setAllImages] = useState<WallpaperImage[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -19,16 +23,22 @@ function App() {
   const [selectedImage, setSelectedImage] = useState<WallpaperImage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showEnginesModal, setShowEnginesModal] = useState(false);
 
-  // Load data on mount
+  // Update document title when active engine changes
+  useEffect(() => {
+    document.title = `WALL·E Gallery - ${activeEngine.name}`;
+  }, [activeEngine]);
+
+  // Load data when active engine changes
   useEffect(() => {
     async function loadData() {
       try {
         setLoading(true);
         setError(null);
         const [images, cats] = await Promise.all([
-          getAllImages(),
-          getCategories()
+          getAllImages(activeEngine),
+          getCategories(activeEngine)
         ]);
         setAllImages(images);
         setCategories(cats);
@@ -40,7 +50,7 @@ function App() {
       }
     }
     loadData();
-  }, []);
+  }, [activeEngine]);
 
   // Filter images based on category and search
   const filteredImages = useMemo(() => {
@@ -126,18 +136,29 @@ function App() {
         onCategorySelect={setSelectedCategory}
         theme={theme}
         onThemeToggle={toggleTheme}
+        activeEngine={activeEngine}
       />
 
       {/* Main content */}
       <main className="flex-1 overflow-y-auto">
         {/* Header with search */}
         <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border p-4">
-          <div className="max-w-2xl">
-            <SearchBar
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder="Search by name or category..."
-            />
+          <div className="flex items-center gap-4">
+            <div className="flex-1 max-w-2xl">
+              <SearchBar
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Search by name or category..."
+              />
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowEnginesModal(true)}
+              title="Engines"
+            >
+              <Settings className="w-5 h-5" />
+            </Button>
           </div>
           <div className="mt-2 text-sm text-muted-foreground">
             {selectedCategory ? (
@@ -179,6 +200,12 @@ function App() {
         image={selectedImage}
         onClose={() => setSelectedImage(null)}
         onDownload={handleDownload}
+      />
+
+      {/* Engines configuration modal */}
+      <EnginesModal
+        isOpen={showEnginesModal}
+        onClose={() => setShowEnginesModal(false)}
       />
     </div>
   );

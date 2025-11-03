@@ -1,4 +1,4 @@
-import type { Category } from "../types";
+import type { Category, Engine } from "../types";
 import { cn } from "../lib/utils";
 import { Layers, Moon, Sun } from "lucide-react";
 import { Button } from "./Button";
@@ -10,6 +10,7 @@ interface SidebarProps {
   onCategorySelect: (category: string | null) => void;
   theme: Theme;
   onThemeToggle: () => void;
+  activeEngine: Engine;
 }
 
 export function Sidebar({
@@ -18,6 +19,7 @@ export function Sidebar({
   onCategorySelect,
   theme,
   onThemeToggle,
+  activeEngine,
 }: SidebarProps) {
   return (
     <aside className="w-64 h-screen bg-card border-r border-border flex flex-col sticky top-0">
@@ -91,12 +93,25 @@ export function Sidebar({
       </div>
 
       {/* Footer */}
-      <div className="p-4 border-t border-border text-xs text-muted-foreground">
+      <div className="p-4 border-t border-border text-xs">
+        <div className="flex items-center gap-2 mb-2">
+          {activeEngine.avatarUrl && (
+            <img
+              src={activeEngine.avatarUrl}
+              alt={`${activeEngine.repoOwner} avatar`}
+              className="w-6 h-6 rounded-full"
+            />
+          )}
+          <span className="font-medium text-foreground truncate">
+            {activeEngine.name}
+          </span>
+        </div>
         <a
-          href="https://github.com/dharmx/walls"
+          href={`https://github.com/${activeEngine.repoOwner}/${activeEngine.repoName}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="hover:text-foreground transition-colors"
+          className="text-muted-foreground hover:text-foreground transition-colors"
+          title="View on GitHub"
         >
           View on GitHub →
         </a>

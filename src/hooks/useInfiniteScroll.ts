@@ -13,9 +13,14 @@ export function useInfiniteScroll({ allImages, pageSize = 20 }: UseInfiniteScrol
 
   // Reset when allImages changes
   useEffect(() => {
+    const start = 0;
+    const end = pageSize;
+    const newImages = allImages.slice(start, end);
+
     setPage(0);
-    setDisplayedImages([]);
-    loadMore(0);
+    setDisplayedImages(newImages);
+    setHasMore(end < allImages.length);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allImages]);
 
   const loadMore = useCallback((currentPage: number) => {

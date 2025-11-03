@@ -1,0 +1,14 @@
+[
+  {
+    "id": "dharmx-walls",
+    "name": "dharmx/walls",
+    "repoOwner": "dharmx",
+    "repoName": "walls",
+    "branch": "main",
+    "treeSha": "6bf4d733ebf2b484a37c17d742eb47e5139e6a14",
+    "excludedFolders": [".github", "logo", "m-26.jp"],
+    "imageExtensions": [".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"],
+    "isDefault": true,
+    "avatarUrl": "https://github.com/dharmx.png"
+  }
+]

@@ -28,3 +28,22 @@ export interface GitHubTreeResponse {
   tree: GitHubTreeItem[];
   truncated: boolean;
 }
+
+export interface Engine {
+  id: string;
+  name: string;
+  repoOwner: string;
+  repoName: string;
+  branch: string;
+  treeSha: string;
+  excludedFolders: string[];
+  imageExtensions: string[];
+  isDefault: boolean;
+  avatarUrl?: string;
+  createdAt?: number;
+}
+
+export interface EngineMetadata {
+  activeEngineId: string;
+  customEngines: Engine[];
+}

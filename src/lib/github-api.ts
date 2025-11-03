@@ -1,17 +1,9 @@
-import type { GitHubTreeResponse, WallpaperImage, Category } from '../types';
-
-const REPO_OWNER = 'dharmx';
-const REPO_NAME = 'walls';
-const TREE_SHA = '6bf4d733ebf2b484a37c17d742eb47e5139e6a14';
-const RAW_BASE_URL = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main`;
+import type { GitHubTreeResponse, WallpaperImage, Category, Engine } from '../types';
 
 // Image proxy for thumbnails - wsrv.nl supports on-the-fly resizing
 const IMAGE_PROXY_URL = 'https://wsrv.nl';
 const THUMBNAIL_WIDTH = 400;
 const THUMBNAIL_QUALITY = 80;
-
-const EXCLUDED_FOLDERS = ['.github', 'logo', 'm-26.jp'];
-const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp'];
 
 /**
  * Generate thumbnail URL using image proxy
@@ -21,53 +13,86 @@ function getThumbnailUrl(originalUrl: string): string {
   return `${IMAGE_PROXY_URL}/?url=${encodeURIComponent(originalUrl)}&w=${THUMBNAIL_WIDTH}&q=${THUMBNAIL_QUALITY}&output=webp`;
 }
 
-let cachedTreeData: GitHubTreeResponse | null = null;
+// Cache tree data per engine
+const engineCache = new Map<string, GitHubTreeResponse>();
+// Track in-flight requests to prevent duplicate API calls
+const inflightRequests = new Map<string, Promise<GitHubTreeResponse>>();
 
 /**
- * Fetch the complete repository tree structure
+ * Fetch the complete repository tree structure for an engine
  */
-export async function fetchRepoTree(): Promise<GitHubTreeResponse> {
-  if (cachedTreeData) {
-    return cachedTreeData;
+export async function fetchRepoTree(engine: Engine): Promise<GitHubTreeResponse> {
+  // Check cache first
+  if (engineCache.has(engine.id)) {
+    console.log(`[Cache HIT] Using cached tree for ${engine.id}`);
+    return engineCache.get(engine.id)!;
   }
 
-  const response = await fetch(
-    `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/git/trees/${TREE_SHA}?recursive=1`
-  );
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch repository tree: ${response.statusText}`);
+  // Check if there's already a request in flight for this engine
+  if (inflightRequests.has(engine.id)) {
+    console.log(`[Dedup] Waiting for in-flight request for ${engine.id}`);
+    return inflightRequests.get(engine.id)!;
   }
 
-  const data: GitHubTreeResponse = await response.json();
-  cachedTreeData = data;
-  return data;
+  // Start new request and track it
+  console.log(`[API CALL] Fetching tree from GitHub for ${engine.id}`);
+  const requestPromise = (async () => {
+    try {
+      const response = await fetch(
+        `https://api.github.com/repos/${engine.repoOwner}/${engine.repoName}/git/trees/${engine.treeSha}?recursive=1`
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch repository tree: ${response.statusText}`);
+      }
+
+      const data: GitHubTreeResponse = await response.json();
+      engineCache.set(engine.id, data);
+      console.log(`[Cache SET] Cached tree for ${engine.id}`);
+      return data;
+    } finally {
+      // Remove from in-flight requests when done
+      inflightRequests.delete(engine.id);
+    }
+  })();
+
+  // Store the promise so concurrent calls can reuse it
+  inflightRequests.set(engine.id, requestPromise);
+  return requestPromise;
 }
 
 /**
  * Check if a file is an image based on extension
  */
-function isImageFile(path: string): boolean {
+function isImageFile(path: string, extensions: string[]): boolean {
   const ext = path.toLowerCase().substring(path.lastIndexOf('.'));
-  return IMAGE_EXTENSIONS.includes(ext);
+  return extensions.includes(ext);
 }
 
 /**
- * Get all categories (folders containing images)
+ * Get all categories (folders containing images) for an engine
  */
-export async function getCategories(): Promise<Category[]> {
-  const tree = await fetchRepoTree();
+export async function getCategories(engine: Engine): Promise<Category[]> {
+  const tree = await fetchRepoTree(engine);
 
   const categoryMap = new Map<string, number>();
 
   tree.tree.forEach(item => {
-    if (item.type === 'blob' && isImageFile(item.path)) {
+    if (item.type === 'blob' && isImageFile(item.path, engine.imageExtensions)) {
       const parts = item.path.split('/');
+
+      // Handle both nested (folder/image.png) and flat (image.png) structures
+      let category: string;
       if (parts.length >= 2) {
-        const category = parts[0];
-        if (!EXCLUDED_FOLDERS.includes(category)) {
-          categoryMap.set(category, (categoryMap.get(category) || 0) + 1);
-        }
+        // Nested: use folder name
+        category = parts[0];
+      } else {
+        // Flat: use 'root' or 'uncategorized' as category
+        category = 'uncategorized';
+      }
+
+      if (!engine.excludedFolders.includes(category)) {
+        categoryMap.set(category, (categoryMap.get(category) || 0) + 1);
       }
     }
   });
@@ -82,23 +107,30 @@ export async function getCategories(): Promise<Category[]> {
 }
 
 /**
- * Get all images from the repository
+ * Get all images from the repository for an engine
  */
-export async function getAllImages(): Promise<WallpaperImage[]> {
-  const tree = await fetchRepoTree();
+export async function getAllImages(engine: Engine): Promise<WallpaperImage[]> {
+  const tree = await fetchRepoTree(engine);
+  const rawBaseUrl = `https://raw.githubusercontent.com/${engine.repoOwner}/${engine.repoName}/${engine.branch}`;
 
   return tree.tree
     .filter(item => {
-      if (item.type !== 'blob' || !isImageFile(item.path)) return false;
-      const category = item.path.split('/')[0];
-      return !EXCLUDED_FOLDERS.includes(category);
+      if (item.type !== 'blob' || !isImageFile(item.path, engine.imageExtensions)) return false;
+
+      const parts = item.path.split('/');
+      // Determine category based on structure
+      const category = parts.length >= 2 ? parts[0] : 'uncategorized';
+
+      return !engine.excludedFolders.includes(category);
     })
     .map(item => {
       const parts = item.path.split('/');
-      const category = parts[0];
+
+      // Handle both nested and flat structures
+      const category = parts.length >= 2 ? parts[0] : 'uncategorized';
       const fileName = parts[parts.length - 1];
 
-      const fullUrl = `${RAW_BASE_URL}/${item.path}`;
+      const fullUrl = `${rawBaseUrl}/${item.path}`;
 
       return {
         path: item.path,
@@ -114,16 +146,16 @@ export async function getAllImages(): Promise<WallpaperImage[]> {
 /**
  * Get images by category
  */
-export async function getImagesByCategory(category: string): Promise<WallpaperImage[]> {
-  const allImages = await getAllImages();
+export async function getImagesByCategory(engine: Engine, category: string): Promise<WallpaperImage[]> {
+  const allImages = await getAllImages(engine);
   return allImages.filter(img => img.category === category);
 }
 
 /**
  * Search images by query (searches in category and filename)
  */
-export async function searchImages(query: string): Promise<WallpaperImage[]> {
-  const allImages = await getAllImages();
+export async function searchImages(engine: Engine, query: string): Promise<WallpaperImage[]> {
+  const allImages = await getAllImages(engine);
   const lowerQuery = query.toLowerCase();
 
   return allImages.filter(img =>
@@ -143,4 +175,75 @@ export function paginateImages(
   const start = page * pageSize;
   const end = start + pageSize;
   return images.slice(start, end);
+}
+
+/**
+ * Clear cache for a specific engine
+ */
+export function clearEngineCache(engineId: string): void {
+  engineCache.delete(engineId);
+}
+
+/**
+ * Clear all engine caches
+ */
+export function clearAllCaches(): void {
+  engineCache.clear();
+}
+
+/**
+ * Fetch branch SHA from GitHub API
+ */
+export async function fetchBranchSHA(
+  repoOwner: string,
+  repoName: string,
+  branch: string
+): Promise<string> {
+  const url = `https://api.github.com/repos/${repoOwner}/${repoName}/branches/${branch}`;
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error(`Branch '${branch}' not found in ${repoOwner}/${repoName}`);
+    }
+    throw new Error(`Failed to fetch branch info: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data.commit.sha;
+}
+
+/**
+ * Validate repository and fetch tree SHA
+ */
+export async function validateRepository(
+  repoOwner: string,
+  repoName: string,
+  branch: string
+): Promise<{ valid: boolean; error?: string; sha?: string }> {
+  try {
+    const sha = await fetchBranchSHA(repoOwner, repoName, branch);
+    return { valid: true, sha };
+  } catch (error) {
+    return {
+      valid: false,
+      error: error instanceof Error ? error.message : 'Failed to validate repository'
+    };
+  }
+}
+
+/**
+ * Fetch GitHub user avatar URL
+ */
+export async function fetchUserAvatar(username: string): Promise<string> {
+  const url = `https://api.github.com/users/${username}`;
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    // Return a fallback avatar if fetch fails
+    return `https://github.com/${username}.png`;
+  }
+
+  const data = await response.json();
+  return data.avatar_url || `https://github.com/${username}.png`;
 }
