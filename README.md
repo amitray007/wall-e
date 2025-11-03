@@ -183,7 +183,6 @@ This project is open source and available under the [MIT License](./LICENSE).
 
 ## 🙏 Acknowledgments
 
-- Wallpaper collections by [dharmx](https://github.com/dharmx/walls), [mylinuxforwork](https://github.com/mylinuxforwork/wallpaper), and [D3Ext](https://github.com/D3Ext/aesthetic-wallpapers)
 - Icons by [Lucide](https://lucide.dev)
 - Image optimization by [wsrv.nl](https://wsrv.nl)
 
