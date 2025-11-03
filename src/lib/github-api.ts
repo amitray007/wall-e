@@ -3,19 +3,29 @@ import type {
   WallpaperImage,
   Category,
   Engine,
+  ThumbnailSize,
 } from "../types";
 
 // Image proxy for thumbnails - wsrv.nl supports on-the-fly resizing
 const IMAGE_PROXY_URL = "https://wsrv.nl";
-const THUMBNAIL_WIDTH = 400;
-const THUMBNAIL_QUALITY = 80;
+
+// Thumbnail size configurations
+const THUMBNAIL_SIZES = {
+  small: { width: 300, quality: 75 },
+  medium: { width: 400, quality: 80 },
+  large: { width: 600, quality: 85 },
+};
 
 /**
  * Generate thumbnail URL using image proxy
  */
-function getThumbnailUrl(originalUrl: string): string {
+function getThumbnailUrl(
+  originalUrl: string,
+  size: ThumbnailSize = "medium"
+): string {
+  const config = THUMBNAIL_SIZES[size];
   // wsrv.nl params: w=width, q=quality, output=webp for better compression
-  return `${IMAGE_PROXY_URL}/?url=${encodeURIComponent(originalUrl)}&w=${THUMBNAIL_WIDTH}&q=${THUMBNAIL_QUALITY}&output=webp`;
+  return `${IMAGE_PROXY_URL}/?url=${encodeURIComponent(originalUrl)}&w=${config.width}&q=${config.quality}&output=webp`;
 }
 
 // Cache tree data per engine
@@ -117,7 +127,10 @@ export async function getCategories(engine: Engine): Promise<Category[]> {
 /**
  * Get all images from the repository for an engine
  */
-export async function getAllImages(engine: Engine): Promise<WallpaperImage[]> {
+export async function getAllImages(
+  engine: Engine,
+  thumbnailSize: ThumbnailSize = "medium"
+): Promise<WallpaperImage[]> {
   const tree = await fetchRepoTree(engine);
   const rawBaseUrl = `https://raw.githubusercontent.com/${engine.repoOwner}/${engine.repoName}/${engine.branch}`;
 
@@ -147,7 +160,7 @@ export async function getAllImages(engine: Engine): Promise<WallpaperImage[]> {
       return {
         path: item.path,
         url: fullUrl,
-        thumbnailUrl: getThumbnailUrl(fullUrl),
+        thumbnailUrl: getThumbnailUrl(fullUrl, thumbnailSize),
         category,
         name: fileName,
         size: item.size,
@@ -161,8 +174,9 @@ export async function getAllImages(engine: Engine): Promise<WallpaperImage[]> {
 export async function getImagesByCategory(
   engine: Engine,
   category: string,
+  thumbnailSize: ThumbnailSize = "medium"
 ): Promise<WallpaperImage[]> {
-  const allImages = await getAllImages(engine);
+  const allImages = await getAllImages(engine, thumbnailSize);
   return allImages.filter((img) => img.category === category);
 }
 
@@ -172,8 +186,9 @@ export async function getImagesByCategory(
 export async function searchImages(
   engine: Engine,
   query: string,
+  thumbnailSize: ThumbnailSize = "medium"
 ): Promise<WallpaperImage[]> {
-  const allImages = await getAllImages(engine);
+  const allImages = await getAllImages(engine, thumbnailSize);
   const lowerQuery = query.toLowerCase();
 
   return allImages.filter(

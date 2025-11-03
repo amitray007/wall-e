@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import type { WallpaperImage, Category } from './types';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import type { WallpaperImage, Category, ThumbnailSize, SortOption } from './types';
 import { getAllImages, getCategories } from './lib/github-api';
 import { useTheme } from './hooks/useTheme';
 import { useInfiniteScroll } from './hooks/useInfiniteScroll';
@@ -10,7 +10,7 @@ import { VirtualMasonryGallery } from './components/VirtualMasonryGallery';
 import { OptimizedImageModal } from './components/OptimizedImageModal';
 import { InfiniteScrollTrigger } from './components/InfiniteScrollTrigger';
 import { EnginesModal } from './components/EnginesModal';
-import { Loader2, AlertCircle, Settings } from 'lucide-react';
+import { Loader2, AlertCircle, Settings, Grid3x3, Grid2x2, LayoutGrid, ArrowUpDown } from 'lucide-react';
 import { Button } from './components/Button';
 
 function App() {
@@ -24,20 +24,57 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showEnginesModal, setShowEnginesModal] = useState(false);
+  const [thumbnailSize, setThumbnailSize] = useState<ThumbnailSize>(() => {
+    const stored = localStorage.getItem('thumbnailSize') as ThumbnailSize;
+    return stored || 'medium';
+  });
+  const [sortOption, setSortOption] = useState<SortOption>(() => {
+    const stored = localStorage.getItem('sortOption') as SortOption;
+    return stored || 'default';
+  });
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close sort dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target as Node)) {
+        setShowSortDropdown(false);
+      }
+    };
+
+    if (showSortDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showSortDropdown]);
 
   // Update document title when active engine changes
   useEffect(() => {
     document.title = `WALL·E Gallery - ${activeEngine.name}`;
   }, [activeEngine]);
 
-  // Load data when active engine changes
+  // Persist thumbnail size to localStorage
+  useEffect(() => {
+    localStorage.setItem('thumbnailSize', thumbnailSize);
+  }, [thumbnailSize]);
+
+  // Persist sort option to localStorage
+  useEffect(() => {
+    localStorage.setItem('sortOption', sortOption);
+  }, [sortOption]);
+
+  // Load data when active engine or thumbnail size changes
   useEffect(() => {
     async function loadData() {
       try {
         setLoading(true);
         setError(null);
         const [images, cats] = await Promise.all([
-          getAllImages(activeEngine),
+          getAllImages(activeEngine, thumbnailSize),
           getCategories(activeEngine)
         ]);
         setAllImages(images);
@@ -50,9 +87,9 @@ function App() {
       }
     }
     loadData();
-  }, [activeEngine]);
+  }, [activeEngine, thumbnailSize]);
 
-  // Filter images based on category and search
+  // Filter and sort images based on category, search, and sort option
   const filteredImages = useMemo(() => {
     let filtered = allImages;
 
@@ -70,8 +107,28 @@ function App() {
       );
     }
 
+    // Apply sorting
+    if (sortOption !== 'default') {
+      filtered = [...filtered]; // Create a copy to avoid mutating original array
+
+      switch (sortOption) {
+        case 'name-asc':
+          filtered.sort((a, b) => a.name.localeCompare(b.name));
+          break;
+        case 'name-desc':
+          filtered.sort((a, b) => b.name.localeCompare(a.name));
+          break;
+        case 'size-asc':
+          filtered.sort((a, b) => (a.size || 0) - (b.size || 0));
+          break;
+        case 'size-desc':
+          filtered.sort((a, b) => (b.size || 0) - (a.size || 0));
+          break;
+      }
+    }
+
     return filtered;
-  }, [allImages, selectedCategory, searchQuery]);
+  }, [allImages, selectedCategory, searchQuery, sortOption]);
 
   // Infinite scroll
   const { displayedImages, hasMore, fetchMore } = useInfiniteScroll({
@@ -151,14 +208,117 @@ function App() {
                 placeholder="Search by name or category..."
               />
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowEnginesModal(true)}
-              title="Engines"
-            >
-              <Settings className="w-5 h-5" />
-            </Button>
+
+            {/* Sort selector */}
+            <div className="border border-border rounded-md h-10 px-1 flex items-center">
+              <div className="relative" ref={sortDropdownRef}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowSortDropdown(!showSortDropdown)}
+                  title="Sort options"
+                  className={`h-8 w-8 ${sortOption !== 'default' ? 'bg-accent' : ''}`}
+                >
+                  <ArrowUpDown className="w-4 h-4" />
+                </Button>
+
+                {showSortDropdown && (
+                  <div className="absolute right-0 mt-2 w-48 bg-background border border-border rounded-md shadow-lg z-20">
+                    <div className="py-1">
+                      <button
+                        onClick={() => {
+                          setSortOption('default');
+                          setShowSortDropdown(false);
+                        }}
+                        className={`w-full text-left px-4 py-2 text-sm hover:bg-accent ${sortOption === 'default' ? 'bg-accent font-medium' : ''}`}
+                      >
+                        Default
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSortOption('name-asc');
+                          setShowSortDropdown(false);
+                        }}
+                        className={`w-full text-left px-4 py-2 text-sm hover:bg-accent ${sortOption === 'name-asc' ? 'bg-accent font-medium' : ''}`}
+                      >
+                        Name (A → Z)
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSortOption('name-desc');
+                          setShowSortDropdown(false);
+                        }}
+                        className={`w-full text-left px-4 py-2 text-sm hover:bg-accent ${sortOption === 'name-desc' ? 'bg-accent font-medium' : ''}`}
+                      >
+                        Name (Z → A)
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSortOption('size-asc');
+                          setShowSortDropdown(false);
+                        }}
+                        className={`w-full text-left px-4 py-2 text-sm hover:bg-accent ${sortOption === 'size-asc' ? 'bg-accent font-medium' : ''}`}
+                      >
+                        Size (Small → Large)
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSortOption('size-desc');
+                          setShowSortDropdown(false);
+                        }}
+                        className={`w-full text-left px-4 py-2 text-sm hover:bg-accent ${sortOption === 'size-desc' ? 'bg-accent font-medium' : ''}`}
+                      >
+                        Size (Large → Small)
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Thumbnail size selector */}
+            <div className="flex items-center gap-1 border border-border rounded-md h-10 px-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setThumbnailSize('small')}
+                title="Small thumbnails"
+                className={`h-8 w-8 ${thumbnailSize === 'small' ? 'bg-accent' : ''}`}
+              >
+                <Grid3x3 className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setThumbnailSize('medium')}
+                title="Medium thumbnails"
+                className={`h-8 w-8 ${thumbnailSize === 'medium' ? 'bg-accent' : ''}`}
+              >
+                <Grid2x2 className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setThumbnailSize('large')}
+                title="Large thumbnails"
+                className={`h-8 w-8 ${thumbnailSize === 'large' ? 'bg-accent' : ''}`}
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </Button>
+            </div>
+
+            {/* Settings button */}
+            <div className="border border-border rounded-md h-10 px-1 flex items-center">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowEnginesModal(true)}
+                title="Engines"
+                className="h-8 w-8"
+              >
+                <Settings className="w-5 h-5" />
+              </Button>
+            </div>
           </div>
           <div className="mt-2 text-sm text-muted-foreground">
             {selectedCategory ? (
@@ -186,6 +346,7 @@ function App() {
               images={displayedImages}
               onImageClick={setSelectedImage}
               onDownload={handleDownload}
+              thumbnailSize={thumbnailSize}
             />
             <InfiniteScrollTrigger
               onIntersect={fetchMore}

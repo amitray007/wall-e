@@ -47,3 +47,7 @@ export interface EngineMetadata {
   activeEngineId: string;
   customEngines: Engine[];
 }
+
+export type ThumbnailSize = 'small' | 'medium' | 'large';
+
+export type SortOption = 'default' | 'name-asc' | 'name-desc' | 'size-asc' | 'size-desc';

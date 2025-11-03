@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useMemo } from 'react';
-import type { WallpaperImage } from '../types';
+import type { WallpaperImage, ThumbnailSize } from '../types';
 import { Download, Maximize2 } from 'lucide-react';
 import { Button } from './Button';
 import { ProgressiveImage } from './ProgressiveImage';
@@ -8,27 +8,40 @@ interface VirtualMasonryGalleryProps {
   images: WallpaperImage[];
   onImageClick: (image: WallpaperImage) => void;
   onDownload: (image: WallpaperImage) => void;
+  thumbnailSize?: ThumbnailSize;
 }
 
-// Helper to get number of columns based on screen width
-function getColumnCount(): number {
+// Helper to get number of columns based on screen width and thumbnail size
+function getColumnCount(thumbnailSize: ThumbnailSize = 'medium'): number {
   const width = window.innerWidth;
-  if (width >= 1536) return 5; // 2xl
-  if (width >= 1280) return 4; // xl
-  if (width >= 1024) return 3; // lg
-  if (width >= 640) return 2;  // sm
-  return 1;
+
+  // Multipliers for different thumbnail sizes
+  const sizeMultiplier = {
+    small: 1.5,   // More columns (denser)
+    medium: 1,    // Normal
+    large: 0.67   // Fewer columns (larger images)
+  };
+
+  const multiplier = sizeMultiplier[thumbnailSize];
+
+  if (width >= 1536) return Math.max(1, Math.round(5 * multiplier)); // 2xl: 7/5/3
+  if (width >= 1280) return Math.max(1, Math.round(4 * multiplier)); // xl: 6/4/3
+  if (width >= 1024) return Math.max(1, Math.round(3 * multiplier)); // lg: 4/3/2
+  if (width >= 640) return Math.max(1, Math.round(2 * multiplier));  // sm: 3/2/1
+  return 1; // xs: always 1
 }
 
-export function VirtualMasonryGallery({ images, onImageClick, onDownload }: VirtualMasonryGalleryProps) {
+export function VirtualMasonryGallery({ images, onImageClick, onDownload, thumbnailSize = 'medium' }: VirtualMasonryGalleryProps) {
   const observerRef = useRef<IntersectionObserver | null>(null);
-  const [columns, setColumns] = useState(getColumnCount);
+  const [columns, setColumns] = useState(() => getColumnCount(thumbnailSize));
 
+  // Update columns when thumbnail size or window size changes
   useEffect(() => {
-    const handleResize = () => setColumns(getColumnCount());
+    const handleResize = () => setColumns(getColumnCount(thumbnailSize));
+    handleResize(); // Update immediately
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [thumbnailSize]);
 
   useEffect(() => {
     // Set up intersection observer for lazy loading
