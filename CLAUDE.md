@@ -4,7 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-WALL·E Gallery is a high-performance wallpaper gallery app that displays images from the [dharmx/walls](https://github.com/dharmx/walls) GitHub repository (3.8GB, thousands of 4K+ wallpapers). The app implements aggressive performance optimizations to handle heavy images efficiently.
+WALL·E Gallery is a high-performance wallpaper gallery app that displays images from **any public GitHub repository**. It supports multiple wallpaper sources (engines) and implements aggressive performance optimizations to handle heavy images efficiently.
+
+**Default Engines:**
+- dharmx/walls (3.8GB, thousands of 4K+ wallpapers)
+- mylinuxforwork/wallpaper
+- D3Ext/aesthetic-wallpapers
 
 **Tech Stack:** React 19 + TypeScript + Vite + Tailwind CSS v3
 
@@ -26,20 +31,51 @@ npm run lint
 
 ## Architecture
 
+### Engine System (Multi-Source Support)
+
+The app supports multiple wallpaper sources called "engines". Each engine represents a different GitHub repository:
+
+**Engine Storage:**
+- **Default engines**: Stored in `src/data/default-engines.json` (3 built-in repositories)
+- **Custom engines**: User-added, stored in localStorage under `'wallpaper-engines'`
+- **Active engine**: Tracked in localStorage under engine metadata
+
+**Engine Properties:**
+```typescript
+{
+  id: string;                    // Unique identifier
+  name: string;                  // Display name (e.g., "dharmx/walls")
+  repoOwner: string;             // GitHub username
+  repoName: string;              // Repository name
+  branch: string;                // Branch to fetch from (usually "main")
+  treeSha: string;               // Git commit SHA (40-char hex)
+  excludedFolders: string[];     // Folders to ignore (e.g., [".github", "docs"])
+  imageExtensions: string[];     // Supported formats (e.g., [".png", ".jpg"])
+  isDefault: boolean;            // True for built-in engines
+  avatarUrl?: string;            // GitHub user avatar
+  createdAt?: number;            // Timestamp for custom engines
+}
+```
+
+**Adding New Default Engines:**
+Update `src/data/default-engines.json` with the new engine configuration. Fetch tree SHA using:
+```bash
+curl -s https://api.github.com/repos/{owner}/{repo}/branches/{branch} | grep '"sha"' | head -1
+```
+
 ### Data Flow & Caching Strategy
 
-The app fetches the entire GitHub repository tree once on initial load and caches it in memory for the session:
+The app fetches repository trees once per engine and caches them for the session:
 
-1. **GitHub API** (`src/lib/github-api.ts:fetchRepoTree()`) - Fetches recursive tree structure from GitHub API
-2. **In-memory cache** (`cachedTreeData`) - Stored for the entire session, never refetched
-3. **Client-side filtering** - All category/search operations happen client-side on cached data
+1. **GitHub API** (`src/lib/github-api.ts:fetchRepoTree()`) - Fetches recursive tree structure
+2. **Per-engine cache** (`engineCache` Map) - Each engine's data cached separately
+3. **Request deduplication** (`inflightRequests` Map) - Prevents concurrent duplicate API calls
+4. **Client-side operations** - All filtering, searching, sorting happen on cached data
 
-**Important:** If you need to update the repository data source, modify these constants in `src/lib/github-api.ts`:
-```typescript
-const REPO_OWNER = 'dharmx';
-const REPO_NAME = 'walls';
-const TREE_SHA = '6bf4d733ebf2b484a37c17d742eb47e5139e6a14'; // Git tree SHA
-```
+**Cache Management:**
+- Cache cleared when switching engines
+- Each engine can maintain its own cache simultaneously
+- No automatic refresh (requires page reload or engine re-selection)
 
 ### Performance Optimization System
 
@@ -47,19 +83,23 @@ The app uses a **three-tier image loading strategy** to handle heavy wallpapers:
 
 #### 1. Image Proxy Service (wsrv.nl)
 - **Location:** `src/lib/github-api.ts:getThumbnailUrl()`
-- Generates 400px WebP thumbnails on-the-fly (from ~10MB originals to ~50KB)
+- Generates WebP thumbnails on-the-fly (from ~10MB originals to ~50KB)
 - All gallery images use thumbnails only
-- Configuration: `THUMBNAIL_WIDTH = 400`, `THUMBNAIL_QUALITY = 80`
+- **Three sizes available:**
+  - Small: 300px width, 75% quality
+  - Medium: 400px width, 80% quality (default)
+  - Large: 600px width, 85% quality
+- User can toggle between sizes (persisted to localStorage as `'thumbnailSize'`)
 
 #### 2. Progressive Loading Components
 - **ProgressiveImage** (`src/components/ProgressiveImage.tsx`) - Shows skeleton → thumbnail with blur → sharp
-- **VirtualMasonryGallery** (`src/components/VirtualMasonryGallery.tsx`) - Gallery uses thumbnails only
+- **VirtualMasonryGallery** (`src/components/VirtualMasonryGallery.tsx`) - Gallery uses thumbnails only, column count adjusts based on thumbnail size
 - **OptimizedImageModal** (`src/components/OptimizedImageModal.tsx`) - Loads full resolution only when modal opens
 
 #### 3. Rendering Strategy
 - **Infinite scroll** (`src/hooks/useInfiniteScroll.ts`) - Loads 20 images per batch
 - **Intersection Observer** - Images load 200px before entering viewport
-- **CSS columns masonry** - GPU-accelerated layout, no JS calculation
+- **Flexbox masonry** - Manual round-robin distribution prevents scrambling on new loads
 
 **Result:** 99.5% bandwidth reduction, 90% memory reduction (see PERFORMANCE.md for details)
 
@@ -106,7 +146,7 @@ import { WallpaperImage } from '../types';
 ```
 
 ### Image URL Structure
-- **Full resolution:** `https://raw.githubusercontent.com/dharmx/walls/main/{path}`
+- **Full resolution:** `https://raw.githubusercontent.com/<owner>/<repoName>/main/{path}`
 - **Thumbnail:** `https://wsrv.nl/?url={encoded-url}&w=400&q=80&output=webp`
 
 Both URLs are generated in `src/lib/github-api.ts:getAllImages()` and stored in the WallpaperImage type.
