@@ -6,11 +6,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 WALL·E Gallery is a high-performance wallpaper gallery app that displays images from **any public GitHub repository**. It supports multiple wallpaper sources (engines) and implements aggressive performance optimizations to handle heavy images efficiently.
 
-**Default Engines:**
-- dharmx/walls (3.8GB, thousands of 4K+ wallpapers)
-- mylinuxforwork/wallpaper
-- D3Ext/aesthetic-wallpapers
-
 **Tech Stack:** React 19 + TypeScript + Vite + Tailwind CSS v3
 
 ## Development Commands
@@ -44,7 +39,7 @@ The app supports multiple wallpaper sources called "engines". Each engine repres
 ```typescript
 {
   id: string;                    // Unique identifier
-  name: string;                  // Display name (e.g., "dharmx/walls")
+  name: string;                  // Display name (e.g., "<owner>/<repoName>")
   repoOwner: string;             // GitHub username
   repoName: string;              // Repository name
   branch: string;                // Branch to fetch from (usually "main")
@@ -146,22 +141,56 @@ import { WallpaperImage } from '../types';
 ```
 
 ### Image URL Structure
-- **Full resolution:** `https://raw.githubusercontent.com/<owner>/<repoName>/main/{path}`
-- **Thumbnail:** `https://wsrv.nl/?url={encoded-url}&w=400&q=80&output=webp`
+- **Full resolution:** `https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{path}`
+- **Thumbnail:** `https://wsrv.nl/?url={encoded-url}&w={width}&q={quality}&output=webp`
+  - Width and quality vary based on thumbnail size selection
+  - URLs regenerated when user changes thumbnail size
 
 Both URLs are generated in `src/lib/github-api.ts:getAllImages()` and stored in the WallpaperImage type.
 
-### Excluded Folders
-Certain folders are excluded from the gallery (`src/lib/github-api.ts:EXCLUDED_FOLDERS`):
-- `.github` - GitHub workflows
-- `logo` - Repository branding
-- `m-26.jp` - Non-image content
+### Repository Structure Support
+The app handles both flat and nested repository structures:
+- **Nested**: `folder/image.png` → Category = "folder"
+- **Flat**: `image.png` → Category = "uncategorized"
+
+Excluded folders are configurable per-engine in the engine configuration. Common exclusions:
+- `.github` - GitHub workflows/actions
+- `docs`, `pages` - Documentation folders
+- `assets`, `logo` - Non-wallpaper assets
 
 ### Theme System
 - Initial theme defaults to `'dark'`
 - Stored in localStorage as `'theme'`
 - Applied as class on `<html>` element (`light` or `dark`)
 - Toggle button in Sidebar component
+
+## Key Features Implemented
+
+### Toolbar Controls
+Located in App.tsx header, all preferences persist to localStorage:
+
+1. **Search** - Filters by image name or category (client-side)
+2. **Sort** - 5 options: Default, Name (A→Z), Name (Z→A), Size (Small→Large), Size (Large→Small)
+3. **Grid Size** - 3 thumbnail sizes that adjust both download quality and column count
+4. **Settings** - Opens EnginesModal for engine management
+
+### Engine Management UI
+- **Supported Engines** (default): Grid layout, 3 columns, 6 per page with pagination
+- **Custom Engines** (user-added): List layout, 10 per page with pagination
+- **Add Engine Form**:
+  - Accepts multiple URL formats (full GitHub URL, short owner/repo format, manual entry)
+  - Auto-parses and validates repository
+  - Debounced auto-fetch of tree SHA (1-second delay)
+  - Advanced Settings section (collapsible) for Branch and Tree SHA
+  - Comprehensive error handling with specific messages
+  - Disabled save button with tooltip when validation fails
+
+### Sorting & Filtering
+All operations happen client-side on cached data:
+- **Category filtering**: Click sidebar categories
+- **Search**: Real-time text search
+- **Sorting**: Name or file size, ascending or descending
+- **Combined**: All filters work together
 
 ## Performance Considerations
 
@@ -171,7 +200,9 @@ When modifying the app, maintain these performance characteristics:
 2. **Batch loading** - Keep infinite scroll page size around 20 images
 3. **Progressive enhancement** - Show thumbnails first, load full res only when needed
 4. **Lazy loading** - All images must use `loading="lazy"` attribute
-5. **Memory management** - Avoid keeping full-res images in state unnecessarily
+5. **Memory management** - Clear old engine cache on switch, avoid keeping full-res in state
+6. **Request deduplication** - Prevent concurrent duplicate API calls
+7. **Column distribution** - Use round-robin to prevent scrambling on infinite scroll
 
 See PERFORMANCE.md for detailed optimization documentation.
 

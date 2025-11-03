@@ -1,6 +1,6 @@
 # WALL·E Gallery
 
-A beautiful, Pinterest-like wallpaper gallery app showcasing the [dharmx/walls](https://github.com/dharmx/walls) repository collection.
+A beautiful, Pinterest-like wallpaper gallery app showcasing the github repository collections.
 
 ## Features
 
@@ -21,7 +21,7 @@ A beautiful, Pinterest-like wallpaper gallery app showcasing the [dharmx/walls](
 - **Vite** - Fast build tool and dev server
 - **Tailwind CSS v3** - Utility-first styling
 - **Lucide React** - Beautiful icons
-- **GitHub API** - Direct integration with dharmx/walls repository
+- **GitHub API** - Direct integration with repositories
 
 ## Getting Started
 
@@ -88,10 +88,10 @@ wall-e-gallery/
 
 The app uses the following GitHub API endpoints:
 
-- `https://api.github.com/repos/dharmx/walls/git/trees/{sha}?recursive=1` - Fetch complete repository structure
+- `https://api.github.com/repos/<owner>/<repoName>/git/trees/{sha}?recursive=1` - Fetch complete repository structure
 
 Images are loaded from:
-- `https://raw.githubusercontent.com/dharmx/walls/main/{path}` - Direct image URLs
+- `https://raw.githubusercontent.com/<owner>/<repoName>/main/{path}` - Direct image URLs
 
 ## Features in Detail
 
@@ -165,7 +165,6 @@ Works on all modern browsers that support:
 
 ## Credits
 
-- Wallpaper collection by [dharmx](https://github.com/dharmx/walls)
 - Built with React, TypeScript, and Tailwind CSS
 - Icons by [Lucide](https://lucide.dev)
 
