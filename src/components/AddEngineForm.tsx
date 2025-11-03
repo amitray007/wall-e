@@ -59,7 +59,7 @@ export function AddEngineForm({ onSuccess, onCancel }: AddEngineFormProps) {
   const [saveError, setSaveError] = useState('');
   const [showParsedMessage, setShowParsedMessage] = useState(false);
 
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<number | null>(null);
 
   const canSave = repoOwner && repoName && branch && !shaError;
 
