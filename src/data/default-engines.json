@@ -34,5 +34,89 @@
     "imageExtensions": [".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"],
     "isDefault": true,
     "avatarUrl": "https://github.com/D3Ext.png"
+  },
+  {
+    "id": "anotherhadi-awesome-wallpapers",
+    "name": "anotherhadi/awesome-wallpapers",
+    "repoOwner": "anotherhadi",
+    "repoName": "awesome-wallpapers",
+    "branch": "main",
+    "treeSha": "7d8552bc4a6a4e6b54cd6988fc1f87439057d3d4",
+    "excludedFolders": [".github"],
+    "imageExtensions": [".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"],
+    "isDefault": true,
+    "avatarUrl": "https://github.com/anotherhadi.png"
+  },
+  {
+    "id": "denvercoder1-minimalistic-wallpaper-collection",
+    "name": "DenverCoder1/minimalistic-wallpaper-collection",
+    "repoOwner": "DenverCoder1",
+    "repoName": "minimalistic-wallpaper-collection",
+    "branch": "main",
+    "treeSha": "14b5cbbf52954836247ec75da17ff889224027d5",
+    "excludedFolders": [".github"],
+    "imageExtensions": [".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"],
+    "isDefault": true,
+    "avatarUrl": "https://github.com/DenverCoder1.png"
+  },
+  {
+    "id": "jakoolit-wallpaper-bank",
+    "name": "JaKooLit/Wallpaper-Bank",
+    "repoOwner": "JaKooLit",
+    "repoName": "Wallpaper-Bank",
+    "branch": "main",
+    "treeSha": "9ebd4d3226ff904453e49aaf98ca9f6b9a83a2cc",
+    "excludedFolders": [".github"],
+    "imageExtensions": [".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"],
+    "isDefault": true,
+    "avatarUrl": "https://github.com/JaKooLit.png"
+  },
+  {
+    "id": "amtoine-wallpapers",
+    "name": "amtoine/wallpapers",
+    "repoOwner": "amtoine",
+    "repoName": "wallpapers",
+    "branch": "main",
+    "treeSha": "0d352b234058b7ee20f25ecd559634ff2657c2a3",
+    "excludedFolders": [".github"],
+    "imageExtensions": [".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"],
+    "isDefault": true,
+    "avatarUrl": "https://github.com/amtoine.png"
+  },
+  {
+    "id": "vinceliuice-whitesur-wallpapers",
+    "name": "vinceliuice/WhiteSur-wallpapers",
+    "repoOwner": "vinceliuice",
+    "repoName": "WhiteSur-wallpapers",
+    "branch": "main",
+    "treeSha": "5c1d7ca20b8de0a7efe443792c19e49277262e02",
+    "excludedFolders": [".github"],
+    "imageExtensions": [".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"],
+    "isDefault": true,
+    "avatarUrl": "https://github.com/vinceliuice.png"
+  },
+  {
+    "id": "rose-pine-wallpapers",
+    "name": "rose-pine/wallpapers",
+    "repoOwner": "rose-pine",
+    "repoName": "wallpapers",
+    "branch": "main",
+    "treeSha": "e96b3b5d729d04c78aa2c31fef2824685092d2c7",
+    "excludedFolders": [".github"],
+    "imageExtensions": [".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"],
+    "isDefault": true,
+    "avatarUrl": "https://github.com/rose-pine.png"
+  },
+  {
+    "id": "makccr-wallpapers",
+    "name": "makccr/wallpapers",
+    "repoOwner": "makccr",
+    "repoName": "wallpapers",
+    "branch": "master",
+    "treeSha": "9f1efa28b9b06d3770b2c040f12e2bf82337f162",
+    "excludedFolders": [".github"],
+    "imageExtensions": [".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"],
+    "isDefault": true,
+    "avatarUrl": "https://github.com/makccr.png"
   }
 ]
