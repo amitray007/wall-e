@@ -21,9 +21,9 @@ function parseGitHubRepo(input: string): { owner: string; repo: string } | null 
   // github.com/owner/repo
   // owner/repo
   const patterns = [
-    /^https?:\/\/github\.com\/([^\/]+)\/([^\/\s]+)/i,
-    /^github\.com\/([^\/]+)\/([^\/\s]+)/i,
-    /^([^\/\s]+)\/([^\/\s]+)$/
+    /^https?:\/\/github\.com\/([^/]+)\/([^\s]+)/i,
+    /^github\.com\/([^/]+)\/([^\s]+)/i,
+    /^([^\s]+)\/([^\s]+)$/
   ];
 
   for (const pattern of patterns) {

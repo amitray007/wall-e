@@ -126,6 +126,7 @@ export function EngineProvider({ children }: EngineProviderProps) {
   );
 }
 
+/* eslint-disable react-refresh/only-export-components */
 export function useEngine(): EngineContextValue {
   const context = useContext(EngineContext);
   if (!context) {
