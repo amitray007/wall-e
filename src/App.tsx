@@ -474,46 +474,6 @@ function App() {
                         </div>
                       </div>
 
-                      {/* Thumbnail size options */}
-                      <div className="mb-3">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 px-2">Thumbnail Size</p>
-                        <div className="flex gap-1 px-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setThumbnailSize('small');
-                              setShowMobileOverflowMenu(false);
-                            }}
-                            className={`h-8 w-8 ${thumbnailSize === 'small' ? 'bg-accent' : ''}`}
-                          >
-                            <Grid3x3 className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setThumbnailSize('medium');
-                              setShowMobileOverflowMenu(false);
-                            }}
-                            className={`h-8 w-8 ${thumbnailSize === 'medium' ? 'bg-accent' : ''}`}
-                          >
-                            <Grid2x2 className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setThumbnailSize('large');
-                              setShowMobileOverflowMenu(false);
-                            }}
-                            className={`h-8 w-8 ${thumbnailSize === 'large' ? 'bg-accent' : ''}`}
-                          >
-                            <LayoutGrid className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-
                       {/* Settings */}
                       <div className="border-t border-border pt-2">
                         <Button
