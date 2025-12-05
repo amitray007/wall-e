@@ -5,10 +5,11 @@ import { cn } from '../lib/utils';
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'default' | 'ghost' | 'outline';
   size?: 'default' | 'sm' | 'lg' | 'icon';
+  mobileSize?: 'touch' | 'touch-lg';
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'default', size = 'default', ...props }, ref) => {
+  ({ className, variant = 'default', size = 'default', mobileSize, ...props }, ref) => {
     return (
       <button
         className={cn(
@@ -22,7 +23,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             'h-10 py-2 px-4': size === 'default',
             'h-9 px-3 rounded-md': size === 'sm',
             'h-11 px-8 rounded-md': size === 'lg',
-            'h-10 w-10': size === 'icon',
+            'h-10 w-10 md:h-10 md:w-10': size === 'icon' && !mobileSize,
+            // Mobile touch targets (44px minimum)
+            'h-11 w-11 md:h-10 md:w-10': (size === 'icon' && mobileSize === 'touch') || mobileSize === 'touch',
+            'h-12 w-12 md:h-10 md:w-10': mobileSize === 'touch-lg',
           },
           className
         )}

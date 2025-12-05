@@ -10,7 +10,7 @@ import { VirtualMasonryGallery } from './components/VirtualMasonryGallery';
 import { OptimizedImageModal } from './components/OptimizedImageModal';
 import { InfiniteScrollTrigger } from './components/InfiniteScrollTrigger';
 import { EnginesModal } from './components/EnginesModal';
-import { Loader2, AlertCircle, Settings, Grid3x3, Grid2x2, LayoutGrid, ArrowUpDown } from 'lucide-react';
+import { Loader2, AlertCircle, Settings, Grid3x3, Grid2x2, LayoutGrid, ArrowUpDown, Menu, MoreVertical } from 'lucide-react';
 import { Button } from './components/Button';
 
 function App() {
@@ -33,7 +33,10 @@ function App() {
     return stored || 'default';
   });
   const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [showMobileOverflowMenu, setShowMobileOverflowMenu] = useState(false);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
+  const mobileOverflowRef = useRef<HTMLDivElement>(null);
 
   // Close sort dropdown when clicking outside
   useEffect(() => {
@@ -51,6 +54,49 @@ function App() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showSortDropdown]);
+
+  // Close mobile sidebar when clicking outside or on window resize
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isMobileSidebarOpen && !(event.target as Element).closest('.mobile-sidebar')) {
+        setIsMobileSidebarOpen(false);
+      }
+    };
+
+    const handleResize = () => {
+      // Close mobile sidebar if window becomes desktop-sized
+      if (window.innerWidth >= 768 && isMobileSidebarOpen) {
+        setIsMobileSidebarOpen(false);
+      }
+    };
+
+    if (isMobileSidebarOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      window.addEventListener('resize', handleResize);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [isMobileSidebarOpen]);
+
+  // Close mobile overflow menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (mobileOverflowRef.current && !mobileOverflowRef.current.contains(event.target as Node)) {
+        setShowMobileOverflowMenu(false);
+      }
+    };
+
+    if (showMobileOverflowMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showMobileOverflowMenu]);
 
   // Update document title when active engine changes
   useEffect(() => {
@@ -186,21 +232,57 @@ function App() {
 
   return (
     <div className="flex h-screen bg-background">
-      {/* Sidebar */}
-      <Sidebar
-        categories={categories}
-        selectedCategory={selectedCategory}
-        onCategorySelect={setSelectedCategory}
-        theme={theme}
-        onThemeToggle={toggleTheme}
-        activeEngine={activeEngine}
-      />
+      {/* Desktop Sidebar */}
+      <div className="hidden md:block">
+        <Sidebar
+          categories={categories}
+          selectedCategory={selectedCategory}
+          onCategorySelect={setSelectedCategory}
+          theme={theme}
+          onThemeToggle={toggleTheme}
+          activeEngine={activeEngine}
+        />
+      </div>
+
+      {/* Mobile Sidebar Overlay */}
+      {isMobileSidebarOpen && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsMobileSidebarOpen(false)} />
+          <div className="absolute left-0 top-0 h-full w-80 max-w-[85vw] mobile-sidebar">
+            <Sidebar
+              categories={categories}
+              selectedCategory={selectedCategory}
+              onCategorySelect={(category) => {
+                setSelectedCategory(category);
+                setIsMobileSidebarOpen(false);
+              }}
+              theme={theme}
+              onThemeToggle={toggleTheme}
+              activeEngine={activeEngine}
+              isMobile={true}
+              onClose={() => setIsMobileSidebarOpen(false)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Main content */}
       <main className="flex-1 overflow-y-auto">
         {/* Header with search */}
         <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border p-4">
           <div className="flex items-center gap-4">
+            {/* Mobile hamburger menu */}
+            <Button
+              variant="ghost"
+              size="icon"
+              mobileSize="touch"
+              className="md:hidden"
+              onClick={() => setIsMobileSidebarOpen(true)}
+              title="Open menu"
+            >
+              <Menu className="w-5 h-5" />
+            </Button>
+
             <div className="flex-1 max-w-2xl">
               <SearchBar
                 value={searchQuery}
@@ -209,8 +291,10 @@ function App() {
               />
             </div>
 
-            {/* Sort selector */}
-            <div className="border border-border rounded-md h-10 px-1 flex items-center">
+            {/* Desktop controls - hidden on mobile */}
+            <div className="hidden md:flex items-center gap-2">
+              {/* Sort selector */}
+              <div className="border border-border rounded-md h-10 px-1 flex items-center">
               <div className="relative" ref={sortDropdownRef}>
                 <Button
                   variant="ghost"
@@ -307,17 +391,147 @@ function App() {
               </Button>
             </div>
 
-            {/* Settings button */}
-            <div className="border border-border rounded-md h-10 px-1 flex items-center">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowEnginesModal(true)}
-                title="Engines"
-                className="h-8 w-8"
-              >
-                <Settings className="w-5 h-5" />
-              </Button>
+              {/* Settings button */}
+              <div className="border border-border rounded-md h-10 px-1 flex items-center">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowEnginesModal(true)}
+                  title="Engines"
+                  className="h-8 w-8"
+                >
+                  <Settings className="w-5 h-5" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Mobile overflow menu */}
+            <div className="md:hidden">
+              <div className="relative" ref={mobileOverflowRef}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  mobileSize="touch"
+                  onClick={() => setShowMobileOverflowMenu(!showMobileOverflowMenu)}
+                  title="More options"
+                  className="md:hidden"
+                >
+                  <MoreVertical className="w-5 h-5" />
+                </Button>
+
+                {showMobileOverflowMenu && (
+                  <div className="absolute right-0 mt-2 w-64 bg-background border border-border rounded-md shadow-lg z-20">
+                    <div className="p-2">
+                      {/* Sort options */}
+                      <div className="mb-3">
+                        <p className="text-xs font-medium text-muted-foreground mb-2 px-2">Sort</p>
+                        <div className="space-y-1">
+                          <button
+                            onClick={() => {
+                              setSortOption('default');
+                              setShowMobileOverflowMenu(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent ${sortOption === 'default' ? 'bg-accent font-medium' : ''}`}
+                          >
+                            Default
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSortOption('name-asc');
+                              setShowMobileOverflowMenu(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent ${sortOption === 'name-asc' ? 'bg-accent font-medium' : ''}`}
+                          >
+                            Name (A → Z)
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSortOption('name-desc');
+                              setShowMobileOverflowMenu(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent ${sortOption === 'name-desc' ? 'bg-accent font-medium' : ''}`}
+                          >
+                            Name (Z → A)
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSortOption('size-asc');
+                              setShowMobileOverflowMenu(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent ${sortOption === 'size-asc' ? 'bg-accent font-medium' : ''}`}
+                          >
+                            Size (Small → Large)
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSortOption('size-desc');
+                              setShowMobileOverflowMenu(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent ${sortOption === 'size-desc' ? 'bg-accent font-medium' : ''}`}
+                          >
+                            Size (Large → Small)
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Thumbnail size options */}
+                      <div className="mb-3">
+                        <p className="text-xs font-medium text-muted-foreground mb-2 px-2">Thumbnail Size</p>
+                        <div className="flex gap-1 px-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setThumbnailSize('small');
+                              setShowMobileOverflowMenu(false);
+                            }}
+                            className={`h-8 w-8 ${thumbnailSize === 'small' ? 'bg-accent' : ''}`}
+                          >
+                            <Grid3x3 className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setThumbnailSize('medium');
+                              setShowMobileOverflowMenu(false);
+                            }}
+                            className={`h-8 w-8 ${thumbnailSize === 'medium' ? 'bg-accent' : ''}`}
+                          >
+                            <Grid2x2 className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setThumbnailSize('large');
+                              setShowMobileOverflowMenu(false);
+                            }}
+                            className={`h-8 w-8 ${thumbnailSize === 'large' ? 'bg-accent' : ''}`}
+                          >
+                            <LayoutGrid className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Settings */}
+                      <div className="border-t border-border pt-2">
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-start"
+                          onClick={() => {
+                            setShowEnginesModal(true);
+                            setShowMobileOverflowMenu(false);
+                          }}
+                        >
+                          <Settings className="w-4 h-4 mr-2" />
+                          Engines
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           <div className="mt-2 text-sm text-muted-foreground">

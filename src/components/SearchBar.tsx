@@ -23,7 +23,8 @@ export function SearchBar({ value, onChange, placeholder = 'Search wallpapers...
         <Button
           variant="ghost"
           size="icon"
-          className="absolute right-1 h-8 w-8"
+          mobileSize="touch"
+          className="absolute right-1"
           onClick={() => onChange('')}
         >
           <X className="w-4 h-4" />

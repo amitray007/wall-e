@@ -1,6 +1,6 @@
 import type { Category, Engine } from "../types";
 import { cn } from "../lib/utils";
-import { Layers, Moon, Sun } from "lucide-react";
+import { Layers, Moon, Sun, X } from "lucide-react";
 import { Button } from "./Button";
 import type { Theme } from "../hooks/useTheme";
 
@@ -11,6 +11,8 @@ interface SidebarProps {
   theme: Theme;
   onThemeToggle: () => void;
   activeEngine: Engine;
+  isMobile?: boolean;
+  onClose?: () => void;
 }
 
 export function Sidebar({
@@ -20,6 +22,8 @@ export function Sidebar({
   theme,
   onThemeToggle,
   activeEngine,
+  isMobile = false,
+  onClose,
 }: SidebarProps) {
   return (
     <aside className="w-64 h-screen bg-card border-r border-border flex flex-col sticky top-0">
@@ -30,18 +34,30 @@ export function Sidebar({
             <Layers className="w-5 h-5" />
             WALL·E
           </h1>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onThemeToggle}
-            title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
-          >
-            {theme === "light" ? (
-              <Moon className="w-5 h-5" />
-            ) : (
-              <Sun className="w-5 h-5" />
-            )}
-          </Button>
+           <div className="flex items-center gap-2">
+             <Button
+               variant="ghost"
+               size="icon"
+               onClick={onThemeToggle}
+               title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+             >
+               {theme === "light" ? (
+                 <Moon className="w-5 h-5" />
+               ) : (
+                 <Sun className="w-5 h-5" />
+               )}
+             </Button>
+             {isMobile && onClose && (
+               <Button
+                 variant="ghost"
+                 size="icon"
+                 onClick={onClose}
+                 title="Close menu"
+               >
+                 <X className="w-5 h-5" />
+               </Button>
+             )}
+           </div>
         </div>
         <p className="text-xs text-muted-foreground">Wallpaper Gallery</p>
       </div>

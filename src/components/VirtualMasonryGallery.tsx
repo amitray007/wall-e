@@ -116,7 +116,8 @@ export function VirtualMasonryGallery({ images, onImageClick, onDownload, thumbn
             <Button
               variant="ghost"
               size="icon"
-              className="bg-white/10 hover:bg-white/20 text-white h-8 w-8"
+              mobileSize="touch"
+              className="bg-white/10 hover:bg-white/20 text-white"
               onClick={(e) => {
                 e.stopPropagation();
                 onImageClick(image);
@@ -128,7 +129,8 @@ export function VirtualMasonryGallery({ images, onImageClick, onDownload, thumbn
             <Button
               variant="ghost"
               size="icon"
-              className="bg-white/10 hover:bg-white/20 text-white h-8 w-8"
+              mobileSize="touch"
+              className="bg-white/10 hover:bg-white/20 text-white"
               onClick={(e) => handleDownloadClick(e, image)}
               title="Download"
             >
