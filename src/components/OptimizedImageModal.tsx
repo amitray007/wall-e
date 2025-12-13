@@ -127,3 +127,5 @@ export function OptimizedImageModal({ image, onClose, onDownload }: OptimizedIma
     </div>
   );
 }
+
+export default OptimizedImageModal;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import type { WallpaperImage, Category, ThumbnailSize, SortOption } from './types';
 import { getAllImages, getCategories } from './lib/github-api';
 import { useTheme } from './hooks/useTheme';
@@ -7,11 +7,15 @@ import { useEngine } from './contexts/EngineContext';
 import { Sidebar } from './components/Sidebar';
 import { SearchBar } from './components/SearchBar';
 import { VirtualMasonryGallery } from './components/VirtualMasonryGallery';
-import { OptimizedImageModal } from './components/OptimizedImageModal';
 import { InfiniteScrollTrigger } from './components/InfiniteScrollTrigger';
-import { EnginesModal } from './components/EnginesModal';
-import { Loader2, AlertCircle, Settings, Grid3x3, Grid2x2, LayoutGrid, ArrowUpDown, Menu, MoreVertical } from 'lucide-react';
+import { GallerySkeleton } from './components/GallerySkeleton';
+import { ModalSkeleton } from './components/ModalSkeleton';
+import { AlertCircle, Settings, Grid3x3, Grid2x2, LayoutGrid, ArrowUpDown, Menu, MoreVertical } from 'lucide-react';
 import { Button } from './components/Button';
+
+// Lazy load heavy modal components
+const OptimizedImageModal = lazy(() => import('./components/OptimizedImageModal'));
+const EnginesModal = lazy(() => import('./components/EnginesModal'));
 
 function App() {
   const { theme, toggleTheme } = useTheme();
@@ -201,16 +205,8 @@ function App() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Loading wallpapers...</p>
-        </div>
-      </div>
-    );
-  }
+  // Show gallery skeleton during initial load
+  const showGallerySkeleton = loading;
 
   if (error) {
     return (
@@ -508,7 +504,9 @@ function App() {
         </div>
 
         {/* Gallery */}
-        {filteredImages.length === 0 ? (
+        {showGallerySkeleton ? (
+          <GallerySkeleton count={12} thumbnailSize={thumbnailSize} />
+        ) : filteredImages.length === 0 ? (
           <div className="flex items-center justify-center h-64">
             <p className="text-muted-foreground">
               {searchQuery ? 'No wallpapers found matching your search.' : 'No wallpapers available.'}
@@ -530,18 +528,26 @@ function App() {
         )}
       </main>
 
-      {/* Fullscreen modal with optimized loading */}
-      <OptimizedImageModal
-        image={selectedImage}
-        onClose={() => setSelectedImage(null)}
-        onDownload={handleDownload}
-      />
+      {/* Fullscreen modal with optimized loading - lazy loaded */}
+      {selectedImage && (
+        <Suspense fallback={<ModalSkeleton />}>
+          <OptimizedImageModal
+            image={selectedImage}
+            onClose={() => setSelectedImage(null)}
+            onDownload={handleDownload}
+          />
+        </Suspense>
+      )}
 
-      {/* Engines configuration modal */}
-      <EnginesModal
-        isOpen={showEnginesModal}
-        onClose={() => setShowEnginesModal(false)}
-      />
+      {/* Engines configuration modal - lazy loaded */}
+      {showEnginesModal && (
+        <Suspense fallback={<ModalSkeleton />}>
+          <EnginesModal
+            isOpen={showEnginesModal}
+            onClose={() => setShowEnginesModal(false)}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }
