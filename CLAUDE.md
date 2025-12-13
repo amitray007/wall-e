@@ -24,6 +24,21 @@ npm run preview
 npm run lint
 ```
 
+## Docker Deployment
+
+```bash
+# Build and run with Docker Compose
+docker-compose up -d --build
+
+# View logs
+docker logs wall-e-gallery
+
+# Stop
+docker-compose down
+```
+
+Uses Caddy as web server (configured in `Caddyfile`). Exposes port 80.
+
 ## Architecture
 
 ### Engine System (Multi-Source Support)
@@ -89,9 +104,21 @@ The app uses a **three-tier image loading strategy** to handle heavy wallpapers:
 #### 2. Progressive Loading Components
 - **ProgressiveImage** (`src/components/ProgressiveImage.tsx`) - Shows skeleton → thumbnail with blur → sharp
 - **VirtualMasonryGallery** (`src/components/VirtualMasonryGallery.tsx`) - Gallery uses thumbnails only, column count adjusts based on thumbnail size
-- **OptimizedImageModal** (`src/components/OptimizedImageModal.tsx`) - Loads full resolution only when modal opens
+- **OptimizedImageModal** (`src/components/OptimizedImageModal.tsx`) - Loads full resolution only when modal opens (lazy-loaded)
 
-#### 3. Rendering Strategy
+#### 3. Code Splitting & Lazy Loading
+Heavy components are lazy-loaded with React.lazy() and Suspense:
+- **OptimizedImageModal** - Loaded when user clicks an image
+- **EnginesModal** - Loaded when user opens Settings
+
+Skeleton fallbacks during lazy load:
+- **GallerySkeleton** (`src/components/GallerySkeleton.tsx`) - Grid placeholder during initial load
+- **ModalSkeleton** (`src/components/ModalSkeleton.tsx`) - Modal loading fallback
+- **ImageCardSkeleton** (`src/components/ImageCardSkeleton.tsx`) - Single image placeholder
+
+Vite manual chunks configured in `vite.config.ts` for `react-vendor` and `icons`.
+
+#### 4. Rendering Strategy
 - **Infinite scroll** (`src/hooks/useInfiniteScroll.ts`) - Loads 20 images per batch
 - **Intersection Observer** - Images load 200px before entering viewport
 - **Flexbox masonry** - Manual round-robin distribution prevents scrambling on new loads
@@ -181,6 +208,7 @@ Located in App.tsx header, all preferences persist to localStorage:
   - Accepts multiple URL formats (full GitHub URL, short owner/repo format, manual entry)
   - Auto-parses and validates repository
   - Debounced auto-fetch of tree SHA (1-second delay)
+  - **Branch auto-detection**: If "main" branch fails, automatically tries "master"
   - Advanced Settings section (collapsible) for Branch and Tree SHA
   - Comprehensive error handling with specific messages
   - Disabled save button with tooltip when validation fails
@@ -210,4 +238,10 @@ See PERFORMANCE.md for detailed optimization documentation.
 
 - Production build outputs to `dist/`
 - Includes favicons: `favicon.svg` (light mode) and `favicon-dark.svg` (dark mode)
-- Typical bundle size: ~240KB JS (gzipped: ~75KB), ~16KB CSS (gzipped: ~4KB)
+- Code-split chunks:
+  - `index.js` - Main bundle (~239KB, gzipped: ~75KB)
+  - `react-vendor.js` - React core (~12KB)
+  - `icons.js` - Lucide icons (~12KB)
+  - `EnginesModal.js` - Lazy-loaded (~13KB)
+  - `OptimizedImageModal.js` - Lazy-loaded (~2KB)
+- CSS: ~19KB (gzipped: ~4KB)
