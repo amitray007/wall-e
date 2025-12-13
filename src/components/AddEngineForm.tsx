@@ -101,6 +101,19 @@ export function AddEngineForm({ onSuccess, onCancel }: AddEngineFormProps) {
       setShaError('');
       return sha;
     } catch (error) {
+      // If "main" branch failed, try "master" as fallback
+      if (branch === 'main') {
+        try {
+          const sha = await fetchSHA(repoOwner, repoName, 'master');
+          setTreeSha(sha);
+          setBranch('master'); // Auto-switch to master
+          setShaError('');
+          return sha;
+        } catch {
+          // Both branches failed, show original error
+        }
+      }
+
       const errorMsg =
         error instanceof Error
           ? error.message
