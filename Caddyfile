@@ -1,19 +1,13 @@
 :80 {
-    root * /srv
+	root * /srv
+	encode gzip
 
-    # Enable gzip compression
-    encode gzip
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
 
-    # Cache static assets (JS, CSS with hashes)
-    @assets path /assets/*
-    header @assets Cache-Control "public, max-age=31536000, immutable"
+	@icons path *.ico *.svg
+	header @icons Cache-Control "public, max-age=2592000"
 
-    # Cache favicons
-    @icons path *.ico *.svg
-    header @icons Cache-Control "public, max-age=2592000"
-
-    # SPA fallback - try file, then directory, then index.html
-    try_files {path} {path}/ /index.html
-
-    file_server
+	try_files {path} {path}/ /index.html
+	file_server
 }

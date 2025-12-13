@@ -25,6 +25,6 @@ COPY --from=builder /app/dist /srv
 COPY Caddyfile /etc/caddy/Caddyfile
 
 # Expose port 80
-EXPOSE 80
+EXPOSE 3000
 
 # Caddy runs automatically
