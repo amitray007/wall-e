@@ -15,17 +15,16 @@ COPY . .
 # Build the application
 RUN npm run build
 
-# Production stage
-FROM nginx:alpine AS production
-
-# Copy custom nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Production stage with Caddy
+FROM caddy:alpine AS production
 
 # Copy built assets from builder stage
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/dist /srv
+
+# Copy Caddyfile
+COPY Caddyfile /etc/caddy/Caddyfile
 
 # Expose port 80
 EXPOSE 80
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Caddy runs automatically
