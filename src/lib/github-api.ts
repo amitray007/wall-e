@@ -2,6 +2,7 @@ import type {
   GitHubTreeResponse,
   WallpaperImage,
   Category,
+  CategoryNode,
   Engine,
   ThumbnailSize,
 } from "../types";
@@ -86,6 +87,7 @@ function isImageFile(path: string, extensions: string[]): boolean {
 
 /**
  * Get all categories (folders containing images) for an engine
+ * @deprecated Use getCategoryTree() for hierarchical structure
  */
 export async function getCategories(engine: Engine): Promise<Category[]> {
   const tree = await fetchRepoTree(engine);
@@ -122,6 +124,94 @@ export async function getCategories(engine: Engine): Promise<Category[]> {
       path: name,
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Build a hierarchical category tree from images
+ */
+export async function getCategoryTree(engine: Engine): Promise<CategoryNode[]> {
+  const allImages = await getAllImages(engine);
+  
+  // Helper to get or create a node in the tree
+  const getOrCreateNode = (
+    map: Map<string, CategoryNode>,
+    name: string,
+    fullPath: string,
+    level: number
+  ): CategoryNode => {
+    if (!map.has(name)) {
+      map.set(name, {
+        name,
+        fullPath,
+        count: 0,
+        directCount: 0,
+        children: [],
+        level,
+      });
+    }
+    return map.get(name)!;
+  };
+  
+  // Build tree structure
+  const rootMap = new Map<string, CategoryNode>();
+  
+  allImages.forEach((image) => {
+    const segments = image.pathSegments.slice(0, -1); // Remove filename
+    
+    if (segments.length === 0) {
+      // Flat structure - add to uncategorized
+      const node = getOrCreateNode(rootMap, 'uncategorized', 'uncategorized', 0);
+      node.count++;
+      node.directCount++;
+    } else {
+      // Nested structure - build tree path
+      let currentMap = rootMap;
+      let currentPath = '';
+      
+      segments.forEach((segment, index) => {
+        currentPath = currentPath ? `${currentPath}/${segment}` : segment;
+        const node = getOrCreateNode(currentMap, segment, currentPath, index);
+        node.count++; // Increment total count for all ancestors
+        
+        // If this is the last segment (deepest folder), increment direct count
+        if (index === segments.length - 1) {
+          node.directCount++;
+        }
+        
+        // Prepare for next level - use the children of current node
+        if (index < segments.length - 1) {
+          // Create a map from children array for next iteration
+          const childrenMap = new Map<string, CategoryNode>();
+          node.children.forEach(child => childrenMap.set(child.name, child));
+          
+          // Get or create next child
+          const nextSegment = segments[index + 1];
+          const nextPath = `${currentPath}/${nextSegment}`;
+          const nextNode = getOrCreateNode(childrenMap, nextSegment, nextPath, index + 1);
+          
+          // Update children array if we added a new node
+          if (!node.children.find(c => c.name === nextSegment)) {
+            node.children.push(nextNode);
+          }
+          
+          // Move to children map for next iteration
+          currentMap = childrenMap;
+        }
+      });
+    }
+  });
+  
+  // Recursively sort nodes and their children
+  const sortNodes = (nodes: CategoryNode[]): CategoryNode[] => {
+    return nodes
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(node => ({
+        ...node,
+        children: sortNodes(node.children),
+      }));
+  };
+  
+  return sortNodes(Array.from(rootMap.values()));
 }
 
 /**
@@ -164,6 +254,7 @@ export async function getAllImages(
         category,
         name: fileName,
         size: item.size,
+        pathSegments: parts, // Store full path hierarchy
       };
     });
 }

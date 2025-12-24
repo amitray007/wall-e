@@ -1,30 +1,44 @@
-import type { Category, Engine } from "../types";
+import type { Category, CategoryNode, Engine } from "../types";
 import { cn } from "../lib/utils";
 import { Layers, Moon, Sun, X } from "lucide-react";
 import { Button } from "./Button";
+import { CategoryTreeItem } from "./CategoryTreeItem";
 import type { Theme } from "../hooks/useTheme";
 
 interface SidebarProps {
   categories: Category[];
+  categoryTree: CategoryNode[];
   selectedCategory: string | null;
   onCategorySelect: (category: string | null) => void;
   theme: Theme;
   onThemeToggle: () => void;
   activeEngine: Engine;
+  expandedCategories: Set<string>;
+  onToggleExpand: (fullPath: string) => void;
   isMobile?: boolean;
   onClose?: () => void;
 }
 
 export function Sidebar({
   categories,
+  categoryTree,
   selectedCategory,
   onCategorySelect,
   theme,
   onThemeToggle,
   activeEngine,
+  expandedCategories,
+  onToggleExpand,
   isMobile = false,
   onClose,
 }: SidebarProps) {
+  // Calculate total count from tree or fallback to categories
+  const totalCount = categoryTree.length > 0
+    ? categoryTree.reduce((sum, node) => sum + node.count, 0)
+    : categories.reduce((sum, cat) => sum + cat.count, 0);
+  
+  // Use tree view if available, otherwise fall back to flat list
+  const useTreeView = categoryTree.length > 0;
   return (
     <aside className="w-64 h-screen bg-card border-r border-border flex flex-col sticky top-0">
       {/* Header */}
@@ -80,31 +94,46 @@ export function Sidebar({
           <div className="flex items-center justify-between">
             <span>All Wallpapers</span>
             <span className="text-xs text-muted-foreground">
-              {categories.reduce((sum, cat) => sum + cat.count, 0)}
+              {totalCount}
             </span>
           </div>
         </button>
 
         <div className="space-y-1">
-          {categories.map((category) => (
-            <button
-              key={category.name}
-              onClick={() => onCategorySelect(category.name)}
-              className={cn(
-                "w-full text-left px-3 py-2 rounded-md text-sm transition-colors",
-                "hover:bg-accent hover:text-accent-foreground",
-                selectedCategory === category.name &&
-                  "bg-accent text-accent-foreground font-medium",
-              )}
-            >
-              <div className="flex items-center justify-between">
-                <span className="capitalize truncate">{category.name}</span>
-                <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">
-                  {category.count}
-                </span>
-              </div>
-            </button>
-          ))}
+          {useTreeView ? (
+            // Tree view for nested categories
+            categoryTree.map((node) => (
+              <CategoryTreeItem
+                key={node.fullPath}
+                node={node}
+                selectedCategory={selectedCategory}
+                onCategorySelect={onCategorySelect}
+                expandedCategories={expandedCategories}
+                onToggleExpand={onToggleExpand}
+              />
+            ))
+          ) : (
+            // Flat view fallback
+            categories.map((category) => (
+              <button
+                key={category.name}
+                onClick={() => onCategorySelect(category.name)}
+                className={cn(
+                  "w-full text-left px-3 py-2 rounded-md text-sm transition-colors",
+                  "hover:bg-accent hover:text-accent-foreground",
+                  selectedCategory === category.name &&
+                    "bg-accent text-accent-foreground font-medium",
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="capitalize truncate">{category.name}</span>
+                  <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">
+                    {category.count}
+                  </span>
+                </div>
+              </button>
+            ))
+          )}
         </div>
       </div>
 

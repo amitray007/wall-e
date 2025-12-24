@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import UmamiAnalytics from '@danielgtmn/umami-react';
-import type { WallpaperImage, Category, ThumbnailSize, SortOption } from './types';
-import { getAllImages, getCategories } from './lib/github-api';
+import type { WallpaperImage, Category, CategoryNode, ThumbnailSize, SortOption } from './types';
+import { getAllImages, getCategories, getCategoryTree } from './lib/github-api';
+import { flattenCategoryPaths } from './lib/category-tree';
 import { useTheme } from './hooks/useTheme';
 import { useInfiniteScroll } from './hooks/useInfiniteScroll';
+import { useExpandedCategories } from './hooks/useExpandedCategories';
 import { useEngine } from './contexts/EngineContext';
 import { Sidebar } from './components/Sidebar';
 import { SearchBar } from './components/SearchBar';
@@ -21,8 +23,10 @@ const EnginesModal = lazy(() => import('./components/EnginesModal'));
 function App() {
   const { theme, toggleTheme } = useTheme();
   const { activeEngine } = useEngine();
+  const { expandedCategories, toggleExpand } = useExpandedCategories(activeEngine.id);
   const [allImages, setAllImages] = useState<WallpaperImage[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryTree, setCategoryTree] = useState<CategoryNode[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedImage, setSelectedImage] = useState<WallpaperImage | null>(null);
@@ -124,12 +128,14 @@ function App() {
       try {
         setLoading(true);
         setError(null);
-        const [images, cats] = await Promise.all([
+        const [images, cats, tree] = await Promise.all([
           getAllImages(activeEngine, thumbnailSize),
-          getCategories(activeEngine)
+          getCategories(activeEngine),
+          getCategoryTree(activeEngine)
         ]);
         setAllImages(images);
         setCategories(cats);
+        setCategoryTree(tree);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load wallpapers');
         console.error('Error loading data:', err);
@@ -144,9 +150,39 @@ function App() {
   const filteredImages = useMemo(() => {
     let filtered = allImages;
 
-    // Filter by category
+    // Filter by category (including nested children)
     if (selectedCategory) {
-      filtered = filtered.filter(img => img.category === selectedCategory);
+      // Find the selected category node in the tree
+      const findNode = (nodes: CategoryNode[], path: string): CategoryNode | null => {
+        for (const node of nodes) {
+          if (node.fullPath === path) return node;
+          const found = findNode(node.children, path);
+          if (found) return found;
+        }
+        return null;
+      };
+      
+      const selectedNode = findNode(categoryTree, selectedCategory);
+      
+      if (selectedNode) {
+        // Get all paths including children
+        const allPaths = flattenCategoryPaths(selectedNode);
+        
+        // Filter images that belong to this category or any of its children
+        filtered = filtered.filter(img => {
+          if (selectedCategory === 'uncategorized') {
+            // For uncategorized, match images without folders
+            return img.pathSegments.length === 1;
+          }
+          
+          // Check if image path starts with any of the category paths
+          const imgPath = img.pathSegments.slice(0, -1).join('/');
+          return allPaths.some(path => imgPath === path || imgPath.startsWith(path + '/'));
+        });
+      } else {
+        // Fallback to old behavior for flat categories
+        filtered = filtered.filter(img => img.category === selectedCategory);
+      }
     }
 
     // Filter by search query
@@ -154,7 +190,8 @@ function App() {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(img =>
         img.name.toLowerCase().includes(query) ||
-        img.category.toLowerCase().includes(query)
+        img.category.toLowerCase().includes(query) ||
+        img.path.toLowerCase().includes(query)
       );
     }
 
@@ -179,7 +216,7 @@ function App() {
     }
 
     return filtered;
-  }, [allImages, selectedCategory, searchQuery, sortOption]);
+  }, [allImages, selectedCategory, searchQuery, sortOption, categoryTree]);
 
   // Infinite scroll
   const { displayedImages, hasMore, fetchMore } = useInfiniteScroll({
@@ -249,11 +286,14 @@ function App() {
       <div className="hidden md:block">
         <Sidebar
           categories={categories}
+          categoryTree={categoryTree}
           selectedCategory={selectedCategory}
           onCategorySelect={setSelectedCategory}
           theme={theme}
           onThemeToggle={toggleTheme}
           activeEngine={activeEngine}
+          expandedCategories={expandedCategories}
+          onToggleExpand={toggleExpand}
         />
       </div>
 
@@ -264,6 +304,7 @@ function App() {
           <div className="absolute left-0 top-0 h-full w-80 max-w-[85vw] mobile-sidebar">
             <Sidebar
               categories={categories}
+              categoryTree={categoryTree}
               selectedCategory={selectedCategory}
               onCategorySelect={(category) => {
                 setSelectedCategory(category);
@@ -272,6 +313,8 @@ function App() {
               theme={theme}
               onThemeToggle={toggleTheme}
               activeEngine={activeEngine}
+              expandedCategories={expandedCategories}
+              onToggleExpand={toggleExpand}
               isMobile={true}
               onClose={() => setIsMobileSidebarOpen(false)}
             />
@@ -510,7 +553,13 @@ function App() {
           <div className="mt-2 text-sm text-muted-foreground">
             {selectedCategory ? (
               <span>
-                <span className="capitalize font-medium">{selectedCategory}</span> • {filteredImages.length} wallpapers
+                <span className="capitalize font-medium">
+                  {selectedCategory.split('/').pop()}
+                </span>
+                {selectedCategory.includes('/') && (
+                  <span className="text-xs ml-1">({selectedCategory})</span>
+                )}
+                {' • '}{filteredImages.length} wallpapers
               </span>
             ) : (
               <span>

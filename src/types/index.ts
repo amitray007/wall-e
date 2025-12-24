@@ -5,12 +5,22 @@ export interface WallpaperImage {
   category: string;
   name: string;
   size?: number;
+  pathSegments: string[]; // Full path hierarchy: ['folder', 'subfolder', 'image.png']
 }
 
 export interface Category {
   name: string;
   count: number;
   path: string;
+}
+
+export interface CategoryNode {
+  name: string;
+  fullPath: string; // Full path from root: 'folder/subfolder'
+  count: number; // Total images in this category and all children
+  directCount: number; // Images directly in this category (not in subfolders)
+  children: CategoryNode[];
+  level: number; // Depth in tree (0 = root)
 }
 
 export interface GitHubTreeItem {
