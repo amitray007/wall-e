@@ -118,5 +118,17 @@
     "imageExtensions": [".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"],
     "isDefault": true,
     "avatarUrl": "https://github.com/makccr.png"
+  },
+  {
+    "id": "sleepycathey-cozypixels",
+    "name": "SleepyCatHey/CozyPixels",
+    "repoOwner": "SleepyCatHey",
+    "repoName": "CozyPixels",
+    "branch": "main",
+    "treeSha": "fff072afbdef4b6effc917bcdf44b4b0776ffff8",
+    "excludedFolders": [],
+    "imageExtensions": [".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"],
+    "isDefault": true,
+    "avatarUrl": "https://github.com/SleepyCatHey.png"
   }
 ]
