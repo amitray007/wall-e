@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
+import UmamiAnalytics from '@danielgtmn/umami-react';
 import type { WallpaperImage, Category, ThumbnailSize, SortOption } from './types';
 import { getAllImages, getCategories } from './lib/github-api';
 import { useTheme } from './hooks/useTheme';
@@ -226,8 +227,24 @@ function App() {
     );
   }
 
+  // Determine if analytics should be enabled
+  const isAnalyticsEnabled = useMemo(() => {
+    const forceEnable = import.meta.env.VITE_ENABLE_ANALYTICS === 'true';    
+    if (forceEnable) return true;
+    return import.meta.env.PROD;
+  }, []);
+
   return (
     <div className="flex h-screen bg-background">
+      {/* Analytics */}
+      {isAnalyticsEnabled && (
+        <UmamiAnalytics
+          url={import.meta.env.VITE_UMAMI_URL || 'https://um.kairo.click'}
+          websiteId={import.meta.env.VITE_UMAMI_ID || 'e1767cc6-3e0b-4ab0-b1fe-701b92a8741e'}
+          lazyLoad={true}
+        />
+      )}
+
       {/* Desktop Sidebar */}
       <div className="hidden md:block">
         <Sidebar
