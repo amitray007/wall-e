@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { Engine } from '../types';
 import {
@@ -10,6 +10,7 @@ import {
   getActiveEngine as getActiveEngineFromStorage
 } from '../lib/engine-storage';
 import { fetchBranchSHA, clearEngineCache, fetchUserAvatar } from '../lib/github-api';
+import { cleanupStaleExpandedCategories } from '../hooks/useExpandedCategories';
 
 interface EngineContextValue {
   activeEngine: Engine;
@@ -20,6 +21,7 @@ interface EngineContextValue {
   removeEngine: (engineId: string) => void;
   fetchSHA: (owner: string, repo: string, branch: string) => Promise<string>;
   refreshEngines: () => void;
+  setTemporaryEngine: (engine: Engine) => void;
 }
 
 const EngineContext = createContext<EngineContextValue | undefined>(undefined);
@@ -35,6 +37,13 @@ export function EngineProvider({ children }: EngineProviderProps) {
     const metadata = loadEngineMetadata();
     return getAllEngines(metadata.customEngines);
   });
+  const [temporaryEngine, setTemporaryEngineState] = useState<Engine | null>(null);
+
+  // Clean up stale expanded categories on mount
+  useEffect(() => {
+    const engineIds = allEngines.map(e => e.id);
+    cleanupStaleExpandedCategories(engineIds);
+  }, []); // Only run once on mount
 
   const refreshEngines = useCallback(() => {
     const updated = getActiveEngineFromStorage();
@@ -108,15 +117,21 @@ export function EngineProvider({ children }: EngineProviderProps) {
     return await fetchBranchSHA(owner, repo, branch);
   }, []);
 
+  const setTemporaryEngine = useCallback((engine: Engine) => {
+    setTemporaryEngineState(engine);
+    setActiveEngine(engine);
+  }, []);
+
   const value: EngineContextValue = {
-    activeEngine,
+    activeEngine: temporaryEngine || activeEngine,
     allEngines,
     isLoading,
     switchEngine,
     addEngine,
     removeEngine,
     fetchSHA,
-    refreshEngines
+    refreshEngines,
+    setTemporaryEngine
   };
 
   return (

@@ -1,5 +1,6 @@
 import type { Engine, EngineMetadata } from '../types';
 import { DEFAULT_ENGINES, getDefaultEngine } from './engines';
+import { cleanupStaleExpandedCategories } from '../hooks/useExpandedCategories';
 
 const STORAGE_KEY = 'wallpaper-engines';
 
@@ -129,6 +130,11 @@ export function removeCustomEngine(engineId: string): void {
   }
 
   saveEngineMetadata(metadata);
+  
+  // Clean up stale expanded categories after removal
+  const allEngines = getAllEngines(metadata.customEngines);
+  const engineIds = allEngines.map(e => e.id);
+  cleanupStaleExpandedCategories(engineIds);
 }
 
 /**

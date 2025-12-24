@@ -3,6 +3,40 @@ import { useState, useEffect, useCallback } from 'react';
 const STORAGE_KEY = 'expanded-categories';
 
 /**
+ * Clean up expanded categories for engines that no longer exist
+ */
+export function cleanupStaleExpandedCategories(existingEngineIds: string[]): void {
+  try {
+    const keysToRemove: string[] = [];
+    
+    // Iterate through all localStorage keys
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(`${STORAGE_KEY}-`)) {
+        // Extract engine ID from key
+        const engineId = key.replace(`${STORAGE_KEY}-`, '');
+        
+        // Check if this engine still exists
+        if (!existingEngineIds.includes(engineId)) {
+          keysToRemove.push(key);
+        }
+      }
+    }
+    
+    // Remove stale keys
+    keysToRemove.forEach(key => {
+      localStorage.removeItem(key);
+    });
+    
+    if (keysToRemove.length > 0) {
+      console.log(`Cleaned up ${keysToRemove.length} stale expanded-categories entries`);
+    }
+  } catch (error) {
+    console.error('Failed to cleanup stale expanded categories:', error);
+  }
+}
+
+/**
  * Hook to manage expanded/collapsed state of categories with localStorage persistence
  */
 export function useExpandedCategories(engineId: string) {

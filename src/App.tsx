@@ -1,18 +1,21 @@
 import { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import UmamiAnalytics from '@danielgtmn/umami-react';
-import type { WallpaperImage, Category, CategoryNode, ThumbnailSize, SortOption } from './types';
+import type { WallpaperImage, Category, CategoryNode, ThumbnailSize, SortOption, Engine } from './types';
 import { getAllImages, getCategories, getCategoryTree } from './lib/github-api';
 import { flattenCategoryPaths } from './lib/category-tree';
 import { useTheme } from './hooks/useTheme';
 import { useInfiniteScroll } from './hooks/useInfiniteScroll';
 import { useExpandedCategories } from './hooks/useExpandedCategories';
 import { useEngine } from './contexts/EngineContext';
+import { useUrlEngine } from './hooks/useUrlEngine';
+import { updateUrlWithEngine } from './lib/url-params';
 import { Sidebar } from './components/Sidebar';
 import { SearchBar } from './components/SearchBar';
 import { VirtualMasonryGallery } from './components/VirtualMasonryGallery';
 import { InfiniteScrollTrigger } from './components/InfiniteScrollTrigger';
 import { GallerySkeleton } from './components/GallerySkeleton';
 import { ModalSkeleton } from './components/ModalSkeleton';
+import { UrlEngineBanner } from './components/UrlEngineBanner';
 import { AlertCircle, Settings, Grid3x3, Grid2x2, LayoutGrid, ArrowUpDown, Menu, MoreVertical } from 'lucide-react';
 import { Button } from './components/Button';
 
@@ -22,7 +25,7 @@ const EnginesModal = lazy(() => import('./components/EnginesModal'));
 
 function App() {
   const { theme, toggleTheme } = useTheme();
-  const { activeEngine } = useEngine();
+  const { activeEngine, setTemporaryEngine, addEngine, switchEngine, allEngines } = useEngine();
   const { expandedCategories, toggleExpand } = useExpandedCategories(activeEngine.id);
   const [allImages, setAllImages] = useState<WallpaperImage[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -33,6 +36,9 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showEnginesModal, setShowEnginesModal] = useState(false);
+  const [urlEngineError, setUrlEngineError] = useState<string | null>(null);
+  const [showUrlBanner, setShowUrlBanner] = useState(false);
+  const [urlLoadedEngine, setUrlLoadedEngine] = useState<Engine | null>(null);
   const [thumbnailSize, setThumbnailSize] = useState<ThumbnailSize>(() => {
     const stored = localStorage.getItem('thumbnailSize') as ThumbnailSize;
     return stored || 'medium';
@@ -46,6 +52,72 @@ function App() {
   const [showMobileOverflowMenu, setShowMobileOverflowMenu] = useState(false);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
   const mobileOverflowRef = useRef<HTMLDivElement>(null);
+
+  // Handle URL-based engine loading
+  const urlEngineState = useUrlEngine({
+    onEngineLoaded: (engine) => {
+      // Check if this engine already exists (by matching repoOwner, repoName, and branch)
+      const engineExists = allEngines.some(
+        e => e.repoOwner === engine.repoOwner && 
+             e.repoName === engine.repoName && 
+             e.branch === engine.branch
+      );
+
+      if (engineExists) {
+        // Engine already exists, just switch to it without showing banner
+        const existingEngine = allEngines.find(
+          e => e.repoOwner === engine.repoOwner && 
+               e.repoName === engine.repoName && 
+               e.branch === engine.branch
+        );
+        if (existingEngine) {
+          // Switch to existing engine instead of creating temporary one
+          switchEngine(existingEngine.id);
+        }
+        setUrlEngineError(null);
+        setShowUrlBanner(false);
+        setUrlLoadedEngine(null);
+      } else {
+        // New engine, show banner and set as temporary
+        setTemporaryEngine(engine);
+        setUrlEngineError(null);
+        setShowUrlBanner(true);
+        setUrlLoadedEngine(engine);
+      }
+    },
+    onError: (error) => {
+      setUrlEngineError(error);
+    },
+  });
+
+  // Handle saving URL-loaded engine
+  const handleSaveUrlEngine = async () => {
+    if (!urlLoadedEngine) return;
+
+    try {
+      const savedEngine = await addEngine({
+        name: urlLoadedEngine.name,
+        repoOwner: urlLoadedEngine.repoOwner,
+        repoName: urlLoadedEngine.repoName,
+        branch: urlLoadedEngine.branch,
+        treeSha: urlLoadedEngine.treeSha,
+        excludedFolders: urlLoadedEngine.excludedFolders,
+        imageExtensions: urlLoadedEngine.imageExtensions,
+        avatarUrl: urlLoadedEngine.avatarUrl,
+      });
+
+      // Switch to the saved engine
+      await switchEngine(savedEngine.id);
+      setShowUrlBanner(false);
+      setUrlLoadedEngine(null);
+
+      // Clear URL parameters
+      window.history.replaceState({}, '', window.location.pathname);
+    } catch (error) {
+      console.error('Failed to save engine:', error);
+      alert('Failed to save engine. Please try again.');
+    }
+  };
 
   // Close sort dropdown when clicking outside
   useEffect(() => {
@@ -110,6 +182,14 @@ function App() {
   // Update document title when active engine changes
   useEffect(() => {
     document.title = `WALL·E Gallery - ${activeEngine.name}`;
+  }, [activeEngine]);
+
+  // Update URL when active engine changes (for sharing)
+  useEffect(() => {
+    // Only update URL if it's not a default engine and not already from URL
+    if (!activeEngine.isDefault && activeEngine.id.startsWith('url-')) {
+      updateUrlWithEngine(activeEngine.repoOwner, activeEngine.repoName, activeEngine.branch);
+    }
   }, [activeEngine]);
 
   // Persist thumbnail size to localStorage
@@ -243,22 +323,40 @@ function App() {
     }
   };
 
-  // Show gallery skeleton during initial load
-  const showGallerySkeleton = loading;
+  // Show gallery skeleton during initial load or URL engine loading
+  const showGallerySkeleton = loading || urlEngineState.loading;
 
-  if (error) {
+  // Show error for URL engine or regular errors
+  const displayError = urlEngineError || error;
+
+  if (displayError) {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
-        <div className="text-center max-w-md">
+        <div className="text-center max-w-md px-4">
           <AlertCircle className="w-12 h-12 mx-auto mb-4 text-destructive" />
-          <h2 className="text-xl font-bold mb-2">Error Loading Wallpapers</h2>
-          <p className="text-muted-foreground mb-4">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-          >
-            Retry
-          </button>
+          <h2 className="text-xl font-bold mb-2">
+            {urlEngineError ? 'Error Loading Repository from URL' : 'Error Loading Wallpapers'}
+          </h2>
+          <p className="text-muted-foreground mb-4">{displayError}</p>
+          <div className="flex gap-2 justify-center">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+            >
+              Retry
+            </button>
+            {urlEngineError && (
+              <button
+                onClick={() => {
+                  window.history.pushState({}, '', window.location.pathname);
+                  window.location.reload();
+                }}
+                className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/90"
+              >
+                Go to Home
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -613,6 +711,15 @@ function App() {
             onClose={() => setShowEnginesModal(false)}
           />
         </Suspense>
+      )}
+
+      {/* URL Engine Banner - Bottom left corner */}
+      {showUrlBanner && urlLoadedEngine && (
+        <UrlEngineBanner
+          engine={urlLoadedEngine}
+          onSave={handleSaveUrlEngine}
+          onDismiss={() => setShowUrlBanner(false)}
+        />
       )}
     </div>
   );
