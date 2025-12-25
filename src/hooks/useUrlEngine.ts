@@ -12,6 +12,7 @@ export interface UrlEngineState {
 interface UseUrlEngineOptions {
   onEngineLoaded?: (engine: Engine) => void;
   onError?: (error: string) => void;
+  onResolved?: () => void; // Called when URL engine processing is complete (success, error, or no URL)
 }
 
 /**
@@ -32,13 +33,18 @@ export function useUrlEngine(options: UseUrlEngineOptions = {}) {
     if (hasProcessedUrl.current) return;
 
     // Check if URL has engine parameters
-    if (!hasEngineInUrl()) return;
+    if (!hasEngineInUrl()) {
+      // No URL engine - mark as resolved
+      options.onResolved?.();
+      return;
+    }
 
     const urlInfo = parseEngineFromUrl();
     if (!urlInfo) {
       const error = "Invalid repository format in URL";
       setState({ loading: false, error, engine: null });
       options.onError?.(error);
+      options.onResolved?.();
       return;
     }
 
@@ -96,6 +102,7 @@ export function useUrlEngine(options: UseUrlEngineOptions = {}) {
 
       setState({ loading: false, error: null, engine });
       options.onEngineLoaded?.(engine);
+      // Note: onResolved is called by onEngineLoaded handler via setTemporaryEngine
     } catch (error) {
       const errorMessage =
         error instanceof Error
@@ -103,6 +110,7 @@ export function useUrlEngine(options: UseUrlEngineOptions = {}) {
           : "Failed to load repository from URL";
       setState({ loading: false, error: errorMessage, engine: null });
       options.onError?.(errorMessage);
+      options.onResolved?.();
     }
   }, [options]);
 

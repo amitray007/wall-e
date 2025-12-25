@@ -165,7 +165,7 @@ export function EnginesModal({ isOpen, onClose }: EnginesModalProps) {
     );
   };
 
-  const renderListEngineItem = (engine: typeof allEngines[0]) => {
+  const renderListEngineItem = (engine: typeof allEngines[0], showDefaultBadge = true) => {
     const isActive = engine.id === activeEngine.id;
     const isSwitching = switching === engine.id;
 
@@ -207,7 +207,7 @@ export function EnginesModal({ isOpen, onClose }: EnginesModalProps) {
               >
                 {engine.name}
               </p>
-              {engine.isDefault && (
+              {showDefaultBadge && engine.isDefault && (
                 <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full flex-shrink-0">
                   Default
                 </span>
@@ -281,7 +281,11 @@ export function EnginesModal({ isOpen, onClose }: EnginesModalProps) {
                   <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
                     Supported Engines
                   </h3>
-                  <div className="grid grid-cols-3 gap-3">
+                  {/* List view on mobile, grid on larger screens */}
+                  <div className="sm:hidden space-y-2">
+                    {paginatedSupportedEngines.map(engine => renderListEngineItem(engine, false))}
+                  </div>
+                  <div className="hidden sm:grid sm:grid-cols-3 gap-3">
                     {paginatedSupportedEngines.map(renderGridEngineItem)}
                   </div>
 
@@ -325,7 +329,7 @@ export function EnginesModal({ isOpen, onClose }: EnginesModalProps) {
                 {customEngines.length > 0 ? (
                   <>
                     <div className="space-y-2">
-                      {paginatedCustomEngines.map(renderListEngineItem)}
+                      {paginatedCustomEngines.map(engine => renderListEngineItem(engine))}
                     </div>
 
                     {/* Pagination for Custom Engines */}

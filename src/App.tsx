@@ -33,7 +33,7 @@ const SettingsModal = lazy(() => import('./components/SettingsModal'));
 
 function App() {
   const { theme, toggleTheme } = useTheme();
-  const { activeEngine, setTemporaryEngine, addEngine, switchEngine, allEngines } = useEngine();
+  const { activeEngine, setTemporaryEngine, addEngine, switchEngine, allEngines, isWaitingForUrlEngine, setUrlEngineResolved } = useEngine();
   const { expandedCategories, toggleExpand } = useExpandedCategories(activeEngine.id);
   const [allImages, setAllImages] = useState<WallpaperImage[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -91,8 +91,11 @@ function App() {
         setUrlEngineError(null);
         setShowUrlBanner(false);
         setUrlLoadedEngine(null);
+        // Mark URL engine as resolved since we're switching to existing
+        setUrlEngineResolved();
       } else {
         // New engine, show banner and set as temporary
+        // Note: setTemporaryEngine also marks URL engine as resolved
         setTemporaryEngine(engine);
         setUrlEngineError(null);
         setShowUrlBanner(true);
@@ -101,6 +104,10 @@ function App() {
     },
     onError: (error) => {
       setUrlEngineError(error);
+    },
+    onResolved: () => {
+      // Called when URL engine processing is complete (no URL or error)
+      setUrlEngineResolved();
     },
   });
 
@@ -208,41 +215,64 @@ function App() {
 
   // Update document title when active engine changes
   useEffect(() => {
-    document.title = `WALL·E Gallery - ${activeEngine.name}`;
-  }, [activeEngine]);
+    // Don't update title while waiting for URL engine to prevent showing wrong engine name
+    if (isWaitingForUrlEngine) {
+      document.title = 'WALL·E Gallery - Loading...';
+    } else {
+      document.title = `WALL·E Gallery - ${activeEngine.name}`;
+    }
+  }, [activeEngine, isWaitingForUrlEngine]);
 
-  // Fetch fresh rate limit info from /rate_limit API immediately on mount
-  // This ensures the skeleton is shown briefly then replaced with actual data
+  // Fetch fresh rate limit info from /rate_limit API on mount and after data loads
+  // We use a ref to track the last engine we fetched for to avoid duplicate calls
+  const lastRateLimitFetchRef = useRef<string | null>(null);
+  
   useEffect(() => {
-    const fetchFreshRateLimit = async () => {
-      setRateLimitLoading(true);
+    const fetchFreshRateLimit = async (showLoading: boolean) => {
+      if (showLoading) {
+        setRateLimitLoading(true);
+      }
       try {
         const info = await fetchRateLimitInfo();
         if (info) {
           setRateLimitInfo(info);
         }
       } finally {
-        setRateLimitLoading(false);
+        if (showLoading) {
+          setRateLimitLoading(false);
+        }
       }
     };
-    fetchFreshRateLimit();
-  }, []); // Run only on mount
 
-  // Refresh rate limit when engine changes or after data loads
-  // This ensures accuracy after engine switches (which might involve new API calls)
-  useEffect(() => {
-    if (!loading && !error) {
-      const fetchFreshRateLimit = async () => {
-        // Don't show loading state on subsequent fetches to avoid flicker
-        // Just update silently
-        const info = await fetchRateLimitInfo();
-        if (info) {
-          setRateLimitInfo(info);
-        }
-      };
-      fetchFreshRateLimit();
+    // If waiting for URL engine, don't fetch yet
+    if (isWaitingForUrlEngine) {
+      return;
     }
-  }, [loading, error, activeEngine.id]);
+
+    // If data is still loading, don't fetch yet
+    if (loading) {
+      return;
+    }
+
+    // If there's an error, don't fetch
+    if (error) {
+      setRateLimitLoading(false);
+      return;
+    }
+
+    // Only fetch if we haven't fetched for this engine yet
+    const currentEngineId = activeEngine.id;
+    if (lastRateLimitFetchRef.current === currentEngineId) {
+      return;
+    }
+
+    // Mark as fetching for this engine
+    lastRateLimitFetchRef.current = currentEngineId;
+    
+    // Show loading state only on initial fetch (when rateLimitInfo is null)
+    const isInitialFetch = rateLimitInfo === null;
+    fetchFreshRateLimit(isInitialFetch);
+  }, [loading, error, activeEngine.id, isWaitingForUrlEngine, rateLimitInfo]);
 
   // Update URL when active engine changes (for sharing)
   useEffect(() => {
@@ -264,6 +294,12 @@ function App() {
 
   // Load data when active engine or thumbnail size changes
   useEffect(() => {
+    // Don't fetch data while waiting for URL engine to resolve
+    // This prevents unnecessary API calls to the default engine
+    if (isWaitingForUrlEngine) {
+      return;
+    }
+
     async function loadData() {
       try {
         setLoading(true);
@@ -284,7 +320,7 @@ function App() {
       }
     }
     loadData();
-  }, [activeEngine, thumbnailSize]);
+  }, [activeEngine, thumbnailSize, isWaitingForUrlEngine]);
 
   // Filter and sort images based on category, search, and sort option
   const filteredImages = useMemo(() => {
@@ -406,8 +442,8 @@ function App() {
     }
   };
 
-  // Show gallery skeleton during initial load or URL engine loading
-  const showGallerySkeleton = loading || urlEngineState.loading;
+  // Show gallery skeleton during initial load, URL engine loading, or waiting for URL engine resolution
+  const showGallerySkeleton = loading || urlEngineState.loading || isWaitingForUrlEngine;
 
   // Show error for URL engine or regular errors
   const displayError = urlEngineError || error;
@@ -498,6 +534,7 @@ function App() {
           rateLimitInfo={rateLimitInfo}
           rateLimitLoading={rateLimitLoading}
           onOpenSettings={openSettings}
+          isEngineLoading={isWaitingForUrlEngine}
         />
       </div>
 
@@ -524,6 +561,7 @@ function App() {
               rateLimitInfo={rateLimitInfo}
               rateLimitLoading={rateLimitLoading}
               onOpenSettings={openSettings}
+              isEngineLoading={isWaitingForUrlEngine}
             />
           </div>
         </div>
@@ -654,19 +692,30 @@ function App() {
               </Button>
             </div>
 
-              {/* Collections button */}
-              <div className="border border-border rounded-md h-10 px-1 flex items-center">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowEnginesModal(true)}
-                  title="Wallpaper Collections"
-                  className="h-8 w-8"
-                >
-                  <Library className="w-5 h-5" />
-                </Button>
-              </div>
             </div>
+
+            {/* Desktop Collections button with text */}
+            <Button
+              variant="ghost"
+              onClick={() => setShowEnginesModal(true)}
+              title="Wallpaper Collections"
+              className="hidden md:flex items-center gap-2 h-10 px-3 border border-border rounded-md"
+            >
+              <Library className="w-5 h-5" />
+              <span className="text-sm font-medium">Collections</span>
+            </Button>
+
+            {/* Mobile Collections button - icon only */}
+            <Button
+              variant="ghost"
+              size="icon"
+              mobileSize="touch"
+              onClick={() => setShowEnginesModal(true)}
+              title="Wallpaper Collections"
+              className="md:hidden border border-border rounded-md"
+            >
+              <Library className="w-5 h-5" />
+            </Button>
 
             {/* Mobile overflow menu */}
             <div className="md:hidden">

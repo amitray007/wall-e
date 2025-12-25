@@ -11,17 +11,20 @@ import {
 } from '../lib/engine-storage';
 import { fetchBranchSHA, clearEngineCache, fetchUserAvatar } from '../lib/github-api';
 import { cleanupStaleExpandedCategories } from '../hooks/useExpandedCategories';
+import { hasEngineInUrl } from '../lib/url-params';
 
 interface EngineContextValue {
   activeEngine: Engine;
   allEngines: Engine[];
   isLoading: boolean;
+  isWaitingForUrlEngine: boolean;
   switchEngine: (engineId: string) => Promise<void>;
   addEngine: (engine: Omit<Engine, 'id' | 'isDefault' | 'createdAt'>) => Promise<Engine>;
   removeEngine: (engineId: string) => void;
   fetchSHA: (owner: string, repo: string, branch: string) => Promise<string>;
   refreshEngines: () => void;
   setTemporaryEngine: (engine: Engine) => void;
+  setUrlEngineResolved: () => void;
 }
 
 const EngineContext = createContext<EngineContextValue | undefined>(undefined);
@@ -38,6 +41,9 @@ export function EngineProvider({ children }: EngineProviderProps) {
     return getAllEngines(metadata.customEngines);
   });
   const [temporaryEngine, setTemporaryEngineState] = useState<Engine | null>(null);
+  // Track if we're waiting for a URL engine to be resolved
+  // This is set synchronously on mount if URL has engine params
+  const [isWaitingForUrlEngine, setIsWaitingForUrlEngine] = useState(() => hasEngineInUrl());
 
   // Clean up stale expanded categories on mount
   useEffect(() => {
@@ -120,18 +126,27 @@ export function EngineProvider({ children }: EngineProviderProps) {
   const setTemporaryEngine = useCallback((engine: Engine) => {
     setTemporaryEngineState(engine);
     setActiveEngine(engine);
+    // URL engine has been resolved
+    setIsWaitingForUrlEngine(false);
+  }, []);
+
+  // Called when URL engine loading is complete (success or failure)
+  const setUrlEngineResolved = useCallback(() => {
+    setIsWaitingForUrlEngine(false);
   }, []);
 
   const value: EngineContextValue = {
     activeEngine: temporaryEngine || activeEngine,
     allEngines,
     isLoading,
+    isWaitingForUrlEngine,
     switchEngine,
     addEngine,
     removeEngine,
     fetchSHA,
     refreshEngines,
-    setTemporaryEngine
+    setTemporaryEngine,
+    setUrlEngineResolved
   };
 
   return (
