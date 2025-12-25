@@ -9,7 +9,8 @@ import {
   isValidTokenFormat,
   hasGitHubToken,
   validateTokenWithAPI,
-  fetchRateLimitInfo
+  fetchRateLimitInfo,
+  clearRateLimitInfo
 } from '../lib/github-token';
 
 interface GitHubTokenSettingsProps {
@@ -71,12 +72,16 @@ export function GitHubTokenSettings({ onTokenChanged }: GitHubTokenSettingsProps
 
   const handleRemove = async () => {
     if (confirm('Remove GitHub token? This will reduce your rate limit to 60 requests/hour.')) {
+      // Remove token first
       removeGitHubToken();
       
-      // Fetch updated rate limit info (without token)
-      await fetchRateLimitInfo();
+      // Clear the cached rate limit info to force a fresh fetch
+      // This prevents stale authenticated rate limits from being displayed
+      clearRateLimitInfo();
       
       setIsEditing(true);
+      
+      // Notify parent to refresh rate limit (will fetch fresh unauthenticated limits)
       onTokenChanged?.();
     }
   };

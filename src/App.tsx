@@ -1,10 +1,9 @@
 import { useState, useEffect, useMemo, useRef, lazy, Suspense, useCallback } from 'react';
 import UmamiAnalytics from '@danielgtmn/umami-react';
 import type { WallpaperImage, Category, CategoryNode, ThumbnailSize, SortOption, Engine } from './types';
-import { getAllImages, getCategories, getCategoryTree, getCachedRateLimitInfo } from './lib/github-api';
+import { getAllImages, getCategories, getCategoryTree } from './lib/github-api';
 import { fetchRateLimitInfo } from './lib/github-token';
 import type { RateLimitInfo } from './lib/github-token';
-import type { ModalTab } from './components/EnginesModal';
 import { flattenCategoryPaths } from './lib/category-tree';
 import { useTheme } from './hooks/useTheme';
 import { useInfiniteScroll } from './hooks/useInfiniteScroll';
@@ -20,12 +19,13 @@ import { GallerySkeleton } from './components/GallerySkeleton';
 import { ModalSkeleton } from './components/ModalSkeleton';
 import { UrlEngineBanner } from './components/UrlEngineBanner';
 import { RateLimitError } from './components/RateLimitError';
-import { AlertCircle, Settings, Grid3x3, Grid2x2, LayoutGrid, ArrowUpDown, Menu, MoreVertical } from 'lucide-react';
+import { AlertCircle, Library, Grid3x3, Grid2x2, LayoutGrid, ArrowUpDown, Menu, MoreVertical } from 'lucide-react';
 import { Button } from './components/Button';
 
 // Lazy load heavy modal components
 const OptimizedImageModal = lazy(() => import('./components/OptimizedImageModal'));
 const EnginesModal = lazy(() => import('./components/EnginesModal'));
+const SettingsModal = lazy(() => import('./components/SettingsModal'));
 
 function App() {
   const { theme, toggleTheme } = useTheme();
@@ -40,7 +40,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showEnginesModal, setShowEnginesModal] = useState(false);
-  const [enginesModalTab, setEnginesModalTab] = useState<ModalTab>('engines');
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [urlEngineError, setUrlEngineError] = useState<string | null>(null);
   const [showUrlBanner, setShowUrlBanner] = useState(false);
   const [urlLoadedEngine, setUrlLoadedEngine] = useState<Engine | null>(null);
@@ -52,7 +52,10 @@ function App() {
     const stored = localStorage.getItem('sortOption') as SortOption;
     return stored || 'default';
   });
+  // Don't initialize from cache - always fetch fresh from /rate_limit API
+  // Cached data from headers can be stale when engine data is cached
   const [rateLimitInfo, setRateLimitInfo] = useState<RateLimitInfo | null>(null);
+  const [rateLimitLoading, setRateLimitLoading] = useState(true);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [showMobileOverflowMenu, setShowMobileOverflowMenu] = useState(false);
@@ -133,16 +136,10 @@ function App() {
     }
   };
 
-  // Open engines modal with specific tab
-  const openEnginesModal = useCallback((tab: ModalTab = 'engines') => {
-    setEnginesModalTab(tab);
-    setShowEnginesModal(true);
-  }, []);
-
-  // Open settings tab directly (used by RateLimitIndicator)
+  // Open settings modal (used by RateLimitIndicator)
   const openSettings = useCallback(() => {
-    openEnginesModal('settings');
-  }, [openEnginesModal]);
+    setShowSettingsModal(true);
+  }, []);
 
   // Close sort dropdown when clicking outside
   useEffect(() => {
@@ -209,26 +206,38 @@ function App() {
     document.title = `WALL·E Gallery - ${activeEngine.name}`;
   }, [activeEngine]);
 
-  // Sync rate limit info from github-api cache after data loads
+  // Fetch fresh rate limit info from /rate_limit API immediately on mount
+  // This ensures the skeleton is shown briefly then replaced with actual data
+  useEffect(() => {
+    const fetchFreshRateLimit = async () => {
+      setRateLimitLoading(true);
+      try {
+        const info = await fetchRateLimitInfo();
+        if (info) {
+          setRateLimitInfo(info);
+        }
+      } finally {
+        setRateLimitLoading(false);
+      }
+    };
+    fetchFreshRateLimit();
+  }, []); // Run only on mount
+
+  // Refresh rate limit when engine changes or after data loads
+  // This ensures accuracy after engine switches (which might involve new API calls)
   useEffect(() => {
     if (!loading && !error) {
-      // Get the rate limit info that was populated by fetchRepoTree
-      const cachedInfo = getCachedRateLimitInfo();
-      if (cachedInfo) {
-        setRateLimitInfo(cachedInfo);
-      } else {
-        // Fallback: If no rate limit info from headers, fetch it explicitly
-        // This handles edge cases where headers might be missing
-        const fetchFallbackRateLimit = async () => {
-          const info = await fetchRateLimitInfo();
-          if (info) {
-            setRateLimitInfo(info);
-          }
-        };
-        fetchFallbackRateLimit();
-      }
+      const fetchFreshRateLimit = async () => {
+        // Don't show loading state on subsequent fetches to avoid flicker
+        // Just update silently
+        const info = await fetchRateLimitInfo();
+        if (info) {
+          setRateLimitInfo(info);
+        }
+      };
+      fetchFreshRateLimit();
     }
-  }, [loading, error]);
+  }, [loading, error, activeEngine.id]);
 
   // Update URL when active engine changes (for sharing)
   useEffect(() => {
@@ -459,6 +468,7 @@ function App() {
           expandedCategories={expandedCategories}
           onToggleExpand={toggleExpand}
           rateLimitInfo={rateLimitInfo}
+          rateLimitLoading={rateLimitLoading}
           onOpenSettings={openSettings}
         />
       </div>
@@ -484,6 +494,7 @@ function App() {
               isMobile={true}
               onClose={() => setIsMobileSidebarOpen(false)}
               rateLimitInfo={rateLimitInfo}
+              rateLimitLoading={rateLimitLoading}
               onOpenSettings={openSettings}
             />
           </div>
@@ -615,16 +626,16 @@ function App() {
               </Button>
             </div>
 
-              {/* Settings button */}
+              {/* Collections button */}
               <div className="border border-border rounded-md h-10 px-1 flex items-center">
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => openEnginesModal('engines')}
-                  title="Engines"
+                  onClick={() => setShowEnginesModal(true)}
+                  title="Wallpaper Collections"
                   className="h-8 w-8"
                 >
-                  <Settings className="w-5 h-5" />
+                  <Library className="w-5 h-5" />
                 </Button>
               </div>
             </div>
@@ -698,18 +709,18 @@ function App() {
                         </div>
                       </div>
 
-                      {/* Settings */}
+                      {/* Collections */}
                       <div className="border-t border-border pt-2">
                         <Button
                           variant="ghost"
                           className="w-full justify-start"
                           onClick={() => {
-                            openEnginesModal('engines');
+                            setShowEnginesModal(true);
                             setShowMobileOverflowMenu(false);
                           }}
                         >
-                          <Settings className="w-4 h-4 mr-2" />
-                          Engines
+                          <Library className="w-4 h-4 mr-2" />
+                          Collections
                         </Button>
                       </div>
                     </div>
@@ -779,8 +790,17 @@ function App() {
           <EnginesModal
             isOpen={showEnginesModal}
             onClose={() => setShowEnginesModal(false)}
+          />
+        </Suspense>
+      )}
+
+      {/* Settings modal - lazy loaded */}
+      {showSettingsModal && (
+        <Suspense fallback={<ModalSkeleton />}>
+          <SettingsModal
+            isOpen={showSettingsModal}
+            onClose={() => setShowSettingsModal(false)}
             onTokenChanged={refreshRateLimitInfo}
-            initialTab={enginesModalTab}
           />
         </Suspense>
       )}

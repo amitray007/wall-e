@@ -212,6 +212,29 @@ export function getCachedRateLimitInfo(): RateLimitInfo | null {
 }
 
 /**
+ * Get cached rate limit info only if it matches the current auth state
+ * This prevents showing stale data (e.g., 60 limit when user has token configured)
+ */
+export function getValidCachedRateLimitInfo(): RateLimitInfo | null {
+  const cached = getCachedRateLimitInfo();
+  if (!cached) return null;
+  
+  const hasToken = hasGitHubToken();
+  
+  // If user has token but cached limit is unauthenticated (60), it's stale
+  if (hasToken && cached.limit === 60) {
+    return null;
+  }
+  
+  // If user has no token but cached limit is authenticated (5000), it's stale
+  if (!hasToken && cached.limit === 5000) {
+    return null;
+  }
+  
+  return cached;
+}
+
+/**
  * Clear rate limit info from localStorage
  */
 export function clearRateLimitInfo(): void {

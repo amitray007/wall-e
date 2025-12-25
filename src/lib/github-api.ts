@@ -6,7 +6,7 @@ import type {
   Engine,
   ThumbnailSize,
 } from "../types";
-import { getAuthHeaders, parseRateLimitFromHeaders, setRateLimitInfo as saveRateLimitInfo, getCachedRateLimitInfo as getStoredRateLimitInfo, type RateLimitInfo } from "./github-token";
+import { getAuthHeaders, parseRateLimitFromHeaders, setRateLimitInfo as saveRateLimitInfo, getCachedRateLimitInfo as getStoredRateLimitInfo, getValidCachedRateLimitInfo as getValidStoredRateLimitInfo, type RateLimitInfo } from "./github-token";
 
 // Image proxy for thumbnails - wsrv.nl supports on-the-fly resizing
 const IMAGE_PROXY_URL = "https://wsrv.nl";
@@ -437,4 +437,12 @@ export async function fetchUserAvatar(username: string): Promise<string> {
  */
 export function getCachedRateLimitInfo(): RateLimitInfo | null {
   return getStoredRateLimitInfo();
+}
+
+/**
+ * Get cached rate limit info only if it matches current auth state
+ * Returns null if cached data appears stale (prevents UI flicker)
+ */
+export function getValidCachedRateLimitInfo(): RateLimitInfo | null {
+  return getValidStoredRateLimitInfo();
 }
