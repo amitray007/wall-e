@@ -35,7 +35,7 @@ export function EndOfGalleryShowcase({
 
   return (
     <section
-      aria-label="Discover more wallpaper collections"
+      aria-label="Discover more collections"
       className="px-4 py-8 sm:py-12 border-t border-border bg-muted/30"
     >
       <div className="max-w-4xl mx-auto">
@@ -50,11 +50,11 @@ export function EndOfGalleryShowcase({
           <p className="text-muted-foreground text-sm sm:text-base">
             All <span className="font-semibold text-foreground">{totalImages}</span> wallpapers from{' '}
             <span className="font-mono text-foreground">{currentEngine.name}</span>.{' '}
-            Discover more amazing collections below.
+            Discover more below.
           </p>
         </div>
 
-        {/* Engine grid */}
+        {/* Collection grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 mb-8">
           {otherEngines.map((engine) => (
             <button
@@ -89,7 +89,7 @@ export function EndOfGalleryShowcase({
             className="min-w-[200px]"
           >
             <Library className="w-5 h-5 mr-2" aria-hidden="true" />
-            Browse All Collections
+            Browse All
           </Button>
         </div>
       </div>

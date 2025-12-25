@@ -4,10 +4,45 @@ import { Button } from './Button';
 import { AddEngineForm } from './AddEngineForm';
 import { cn } from '../lib/utils';
 import { useEngine } from '../contexts/EngineContext';
+import type { Engine } from '../types';
 
 interface EnginesModalProps {
   isOpen: boolean;
   onClose: () => void;
+}
+
+interface EngineAvatarProps {
+  avatarUrl: string;
+  repoOwner: string;
+  size: 'small' | 'large';
+}
+
+function EngineAvatar({ avatarUrl, repoOwner, size }: EngineAvatarProps) {
+  const [imageLoading, setImageLoading] = useState(true);
+  const isLarge = size === 'large';
+  const containerSize = isLarge ? 'w-16 h-16' : 'w-8 h-8';
+  const spinnerSize = isLarge ? 'w-6 h-6' : 'w-4 h-4';
+
+  return (
+    <div className={cn('relative flex-shrink-0', containerSize, isLarge && 'mb-3')}>
+      {imageLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-muted rounded-full">
+          <div className={cn(spinnerSize, 'border-2 border-primary border-t-transparent rounded-full animate-spin')} />
+        </div>
+      )}
+      <img
+        src={avatarUrl}
+        alt={`${repoOwner} avatar`}
+        className={cn(
+          containerSize,
+          'rounded-full transition-opacity duration-200',
+          imageLoading ? 'opacity-0' : 'opacity-100'
+        )}
+        onLoad={() => setImageLoading(false)}
+        onError={() => setImageLoading(false)}
+      />
+    </div>
+  );
 }
 
 const CUSTOM_ENGINES_PER_PAGE = 10;
@@ -47,14 +82,14 @@ export function EnginesModal({ isOpen, onClose }: EnginesModalProps) {
       // Reload the page to fetch new data
       window.location.reload();
     } catch (error) {
-      console.error('Failed to switch engine:', error);
-      alert('Failed to switch engine. Please try again.');
+      console.error('Failed to switch collection:', error);
+      alert('Failed to switch collection. Please try again.');
       setSwitching(null);
     }
   };
 
   const handleRemoveEngine = (engineId: string) => {
-    if (confirm('Are you sure you want to remove this engine?')) {
+    if (confirm('Are you sure you want to remove this collection?')) {
       try {
         removeEngine(engineId);
         refreshEngines();
@@ -66,8 +101,8 @@ export function EnginesModal({ isOpen, onClose }: EnginesModalProps) {
           setCustomPage(customPage - 1);
         }
       } catch (error) {
-        console.error('Failed to remove engine:', error);
-        alert('Failed to remove engine. Please try again.');
+        console.error('Failed to remove collection:', error);
+        alert('Failed to remove collection. Please try again.');
       }
     }
   };
@@ -108,7 +143,7 @@ export function EnginesModal({ isOpen, onClose }: EnginesModalProps) {
     }
   };
 
-  const renderGridEngineItem = (engine: typeof allEngines[0]) => {
+  const renderGridEngineItem = (engine: Engine) => {
     const isActive = engine.id === activeEngine.id;
     const isSwitching = switching === engine.id;
 
@@ -140,10 +175,10 @@ export function EnginesModal({ isOpen, onClose }: EnginesModalProps) {
         )}
 
         {engine.avatarUrl && (
-          <img
-            src={engine.avatarUrl}
-            alt={`${engine.repoOwner} avatar`}
-            className="w-16 h-16 rounded-full mb-3 flex-shrink-0"
+          <EngineAvatar
+            avatarUrl={engine.avatarUrl}
+            repoOwner={engine.repoOwner}
+            size="large"
           />
         )}
 
@@ -165,7 +200,7 @@ export function EnginesModal({ isOpen, onClose }: EnginesModalProps) {
     );
   };
 
-  const renderListEngineItem = (engine: typeof allEngines[0], showDefaultBadge = true) => {
+  const renderListEngineItem = (engine: Engine, showDefaultBadge = true) => {
     const isActive = engine.id === activeEngine.id;
     const isSwitching = switching === engine.id;
 
@@ -191,10 +226,10 @@ export function EnginesModal({ isOpen, onClose }: EnginesModalProps) {
             <Check className="w-4 h-4 text-primary flex-shrink-0" />
           )}
           {engine.avatarUrl && (
-            <img
-              src={engine.avatarUrl}
-              alt={`${engine.repoOwner} avatar`}
-              className="w-8 h-8 rounded-full flex-shrink-0"
+            <EngineAvatar
+              avatarUrl={engine.avatarUrl}
+              repoOwner={engine.repoOwner}
+              size="small"
             />
           )}
           <div className="flex-1 min-w-0">
@@ -255,7 +290,7 @@ export function EnginesModal({ isOpen, onClose }: EnginesModalProps) {
           <div className="flex items-center gap-3">
             <Library className="w-5 h-5 text-primary" />
             <div>
-              <h2 className="text-lg font-bold">Wallpaper Collections</h2>
+              <h2 className="text-lg font-bold">Collections</h2>
               <p className="text-xs text-muted-foreground">
                 {defaultEngines.length} supported • {customEngines.length} custom
               </p>
@@ -275,11 +310,11 @@ export function EnginesModal({ isOpen, onClose }: EnginesModalProps) {
             />
           ) : (
             <div className="space-y-6">
-              {/* Supported Engines Section */}
+              {/* Supported Collections Section */}
               {defaultEngines.length > 0 && (
                 <div>
                   <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                    Supported Engines
+                    Supported
                   </h3>
                   {/* List view on mobile, grid on larger screens */}
                   <div className="sm:hidden space-y-2">
@@ -289,7 +324,7 @@ export function EnginesModal({ isOpen, onClose }: EnginesModalProps) {
                     {paginatedSupportedEngines.map(renderGridEngineItem)}
                   </div>
 
-                  {/* Pagination for Supported Engines */}
+                  {/* Pagination for Supported Collections */}
                   {supportedTotalPages > 1 && (
                     <div className="flex items-center justify-between pt-4 mt-4 border-t border-border">
                       <Button
@@ -318,11 +353,11 @@ export function EnginesModal({ isOpen, onClose }: EnginesModalProps) {
                 </div>
               )}
 
-              {/* Custom Engines Section */}
+              {/* Custom Collections Section */}
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                    Custom Engines {customEngines.length > 0 && `(${customEngines.length})`}
+                    Custom {customEngines.length > 0 && `(${customEngines.length})`}
                   </h3>
                 </div>
 
@@ -332,7 +367,7 @@ export function EnginesModal({ isOpen, onClose }: EnginesModalProps) {
                       {paginatedCustomEngines.map(engine => renderListEngineItem(engine))}
                     </div>
 
-                    {/* Pagination for Custom Engines */}
+                    {/* Pagination for Custom Collections */}
                     {customTotalPages > 1 && (
                       <div className="flex items-center justify-between pt-4 mt-4 border-t border-border">
                         <Button
@@ -361,18 +396,18 @@ export function EnginesModal({ isOpen, onClose }: EnginesModalProps) {
                   </>
                 ) : (
                   <p className="text-sm text-muted-foreground text-center py-8 border border-dashed border-border rounded-md">
-                    No custom engines yet. Add one to get started!
+                    No custom collections yet. Add one to get started!
                   </p>
                 )}
               </div>
 
-              {/* Add Engine Button */}
+              {/* Add Collection Button */}
               <button
                 onClick={() => setShowAddForm(true)}
                 className="w-full flex items-center justify-center gap-2 p-4 rounded-md border-2 border-dashed border-border hover:border-primary hover:bg-accent/50 transition-all text-muted-foreground hover:text-primary"
               >
                 <Plus className="w-5 h-5" />
-                <span className="font-medium">Add Custom Engine</span>
+                <span className="font-medium">Add Custom Collection</span>
               </button>
             </div>
           )}

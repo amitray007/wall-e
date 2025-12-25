@@ -198,7 +198,7 @@ export function AddEngineForm({ onSuccess, onCancel }: AddEngineFormProps) {
 
       onSuccess();
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Failed to add engine';
+      const errorMsg = error instanceof Error ? error.message : 'Failed to add collection';
       setSaveError(errorMsg);
     } finally {
       setSaving(false);
@@ -417,7 +417,7 @@ export function AddEngineForm({ onSuccess, onCancel }: AddEngineFormProps) {
               Saving...
             </>
           ) : (
-            'Save Engine'
+            'Save Collection'
           )}
         </Button>
       </div>

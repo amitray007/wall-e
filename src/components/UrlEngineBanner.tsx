@@ -38,7 +38,7 @@ export function UrlEngineBanner({ engine, onSave, onDismiss }: UrlEngineBannerPr
                 Repository loaded from URL
               </p>
               <p className="text-xs text-muted-foreground mb-2">
-                <span className="font-mono text-foreground">{engine.name}</span> is temporary. Save it to your collection?
+                <span className="font-mono text-foreground">{engine.name}</span> is temporary. Save it?
               </p>
               
               {/* Action buttons */}
@@ -50,7 +50,7 @@ export function UrlEngineBanner({ engine, onSave, onDismiss }: UrlEngineBannerPr
                   className="h-8 px-3 text-xs"
                 >
                   <Save className="w-3.5 h-3.5 mr-1.5" />
-                  {saving ? 'Saving...' : 'Save to Collection'}
+                  {saving ? 'Saving...' : 'Save'}
                 </Button>
                 <Button
                   variant="ghost"

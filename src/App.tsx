@@ -135,8 +135,8 @@ function App() {
       // Clear URL parameters
       window.history.replaceState({}, '', window.location.pathname);
     } catch (error) {
-      console.error('Failed to save engine:', error);
-      alert('Failed to save engine. Please try again.');
+      console.error('Failed to save collection:', error);
+      alert('Failed to save collection. Please try again.');
     }
   };
 
@@ -698,7 +698,7 @@ function App() {
             <Button
               variant="ghost"
               onClick={() => setShowEnginesModal(true)}
-              title="Wallpaper Collections"
+              title="Collections"
               className="hidden md:flex items-center gap-2 h-10 px-3 border border-border rounded-md"
             >
               <Library className="w-5 h-5" />
@@ -711,7 +711,7 @@ function App() {
               size="icon"
               mobileSize="touch"
               onClick={() => setShowEnginesModal(true)}
-              title="Wallpaper Collections"
+              title="Collections"
               className="md:hidden border border-border rounded-md"
             >
               <Library className="w-5 h-5" />
@@ -871,7 +871,7 @@ function App() {
         </Suspense>
       )}
 
-      {/* Engines configuration modal - lazy loaded */}
+      {/* Collections modal - lazy loaded */}
       {showEnginesModal && (
         <Suspense fallback={<ModalSkeleton />}>
           <EnginesModal
@@ -892,7 +892,7 @@ function App() {
         </Suspense>
       )}
 
-      {/* URL Engine Banner - Bottom right corner */}
+      {/* URL Collection Banner - Bottom right corner */}
       {showUrlBanner && urlLoadedEngine && (
         <UrlEngineBanner
           engine={urlLoadedEngine}
@@ -901,7 +901,7 @@ function App() {
         />
       )}
 
-      {/* Engine Discovery Popup - Bottom right corner */}
+      {/* Collection Discovery Popup - Bottom right corner */}
       {showDiscoveryPopup && !showUrlBanner && (
         <EngineDiscoveryPopup
           engines={suggestedEngines}

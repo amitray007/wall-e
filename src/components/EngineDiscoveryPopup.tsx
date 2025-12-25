@@ -48,7 +48,7 @@ export function EngineDiscoveryPopup({
     <div
       ref={containerRef}
       role="complementary"
-      aria-label="Discover more wallpaper collections"
+      aria-label="Discover more collections"
       onKeyDown={handleKeyDown}
       className="fixed bottom-4 right-4 z-50 max-w-sm w-full sm:w-auto animate-in slide-in-from-bottom-5 fade-in duration-300 motion-reduce:animate-none"
     >
@@ -57,7 +57,7 @@ export function EngineDiscoveryPopup({
         <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
           <div className="flex items-center gap-2">
             <Library className="w-4 h-4 text-primary" aria-hidden="true" />
-            <span className="text-sm font-semibold">Explore More Collections</span>
+            <span className="text-sm font-semibold">Explore More</span>
           </div>
           <Button
             ref={firstButtonRef}
@@ -71,7 +71,7 @@ export function EngineDiscoveryPopup({
           </Button>
         </div>
 
-        {/* Engine avatars */}
+        {/* Collection avatars */}
         <div className="p-4">
           <div className="flex justify-center gap-3 mb-4">
             {engines.map((engine) => (
@@ -107,7 +107,7 @@ export function EngineDiscoveryPopup({
               className="w-full justify-center"
             >
               <Library className="w-4 h-4 mr-2" aria-hidden="true" />
-              View All Collections
+              View All
             </Button>
             
             <Button
