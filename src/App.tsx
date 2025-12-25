@@ -22,6 +22,7 @@ import { UrlEngineBanner } from './components/UrlEngineBanner';
 import { RateLimitError } from './components/RateLimitError';
 import { EngineDiscoveryPopup } from './components/EngineDiscoveryPopup';
 import { EndOfGalleryShowcase } from './components/EndOfGalleryShowcase';
+import { SocialBanner } from './components/SocialBanner';
 import { AlertCircle, Library, Grid3x3, Grid2x2, LayoutGrid, ArrowUpDown, Menu, MoreVertical } from 'lucide-react';
 import { Button } from './components/Button';
 
@@ -864,6 +865,9 @@ function App() {
           }}
         />
       )}
+
+      {/* Social Banner - Always visible, shifts up when other popups are shown */}
+      <SocialBanner hasPopupBelow={showDiscoveryPopup || showUrlBanner} />
     </div>
   );
 }
