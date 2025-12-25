@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import UmamiAnalytics from '@danielgtmn/umami-react';
 import type { WallpaperImage, Category, CategoryNode, ThumbnailSize, SortOption, Engine } from './types';
-import { getAllImages, getCategories, getCategoryTree } from './lib/github-api';
+import { getAllImages, getCategories, getCategoryTree, getCachedRateLimitInfo } from './lib/github-api';
+import { fetchRateLimitInfo } from './lib/github-token';
+import type { RateLimitInfo } from './lib/github-token';
 import { flattenCategoryPaths } from './lib/category-tree';
 import { useTheme } from './hooks/useTheme';
 import { useInfiniteScroll } from './hooks/useInfiniteScroll';
@@ -16,6 +18,7 @@ import { InfiniteScrollTrigger } from './components/InfiniteScrollTrigger';
 import { GallerySkeleton } from './components/GallerySkeleton';
 import { ModalSkeleton } from './components/ModalSkeleton';
 import { UrlEngineBanner } from './components/UrlEngineBanner';
+import { RateLimitError } from './components/RateLimitError';
 import { AlertCircle, Settings, Grid3x3, Grid2x2, LayoutGrid, ArrowUpDown, Menu, MoreVertical } from 'lucide-react';
 import { Button } from './components/Button';
 
@@ -47,6 +50,7 @@ function App() {
     const stored = localStorage.getItem('sortOption') as SortOption;
     return stored || 'default';
   });
+  const [rateLimitInfo, setRateLimitInfo] = useState<RateLimitInfo | null>(null);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [showMobileOverflowMenu, setShowMobileOverflowMenu] = useState(false);
@@ -119,6 +123,14 @@ function App() {
     }
   };
 
+  // Refresh rate limit info
+  const refreshRateLimitInfo = async () => {
+    const updatedInfo = await fetchRateLimitInfo();
+    if (updatedInfo) {
+      setRateLimitInfo(updatedInfo);
+    }
+  };
+
   // Close sort dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -183,6 +195,27 @@ function App() {
   useEffect(() => {
     document.title = `WALL·E Gallery - ${activeEngine.name}`;
   }, [activeEngine]);
+
+  // Sync rate limit info from github-api cache after data loads
+  useEffect(() => {
+    if (!loading && !error) {
+      // Get the rate limit info that was populated by fetchRepoTree
+      const cachedInfo = getCachedRateLimitInfo();
+      if (cachedInfo) {
+        setRateLimitInfo(cachedInfo);
+      } else {
+        // Fallback: If no rate limit info from headers, fetch it explicitly
+        // This handles edge cases where headers might be missing
+        const fetchFallbackRateLimit = async () => {
+          const info = await fetchRateLimitInfo();
+          if (info) {
+            setRateLimitInfo(info);
+          }
+        };
+        fetchFallbackRateLimit();
+      }
+    }
+  }, [loading, error]);
 
   // Update URL when active engine changes (for sharing)
   useEffect(() => {
@@ -328,6 +361,33 @@ function App() {
 
   // Show error for URL engine or regular errors
   const displayError = urlEngineError || error;
+  
+  // Check if it's a rate limit error
+  const isRateLimitErr = displayError && (
+    displayError.includes('rate limit') || 
+    displayError.includes('403')
+  );
+
+  // Determine if analytics should be enabled
+  const isAnalyticsEnabled = useMemo(() => {
+    const forceEnable = import.meta.env.VITE_ENABLE_ANALYTICS === 'true';    
+    if (forceEnable) return true;
+    return import.meta.env.PROD;
+  }, []);
+
+  // Show rate limit error screen if applicable
+  if (isRateLimitErr) {
+    return (
+      <RateLimitError
+        rateLimitInfo={rateLimitInfo}
+        onTokenSaved={async () => {
+          await refreshRateLimitInfo();
+          window.location.reload();
+        }}
+        onRetry={() => window.location.reload()}
+      />
+    );
+  }
 
   if (displayError) {
     return (
@@ -362,13 +422,6 @@ function App() {
     );
   }
 
-  // Determine if analytics should be enabled
-  const isAnalyticsEnabled = useMemo(() => {
-    const forceEnable = import.meta.env.VITE_ENABLE_ANALYTICS === 'true';    
-    if (forceEnable) return true;
-    return import.meta.env.PROD;
-  }, []);
-
   return (
     <div className="flex h-screen bg-background">
       {/* Analytics */}
@@ -392,6 +445,7 @@ function App() {
           activeEngine={activeEngine}
           expandedCategories={expandedCategories}
           onToggleExpand={toggleExpand}
+          rateLimitInfo={rateLimitInfo}
         />
       </div>
 
@@ -415,6 +469,7 @@ function App() {
               onToggleExpand={toggleExpand}
               isMobile={true}
               onClose={() => setIsMobileSidebarOpen(false)}
+              rateLimitInfo={rateLimitInfo}
             />
           </div>
         </div>
@@ -709,6 +764,7 @@ function App() {
           <EnginesModal
             isOpen={showEnginesModal}
             onClose={() => setShowEnginesModal(false)}
+            onTokenChanged={refreshRateLimitInfo}
           />
         </Suspense>
       )}

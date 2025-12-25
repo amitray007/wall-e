@@ -6,6 +6,7 @@ import type {
   Engine,
   ThumbnailSize,
 } from "../types";
+import { getAuthHeaders, parseRateLimitFromHeaders, setRateLimitInfo as saveRateLimitInfo, getCachedRateLimitInfo as getStoredRateLimitInfo, type RateLimitInfo } from "./github-token";
 
 // Image proxy for thumbnails - wsrv.nl supports on-the-fly resizing
 const IMAGE_PROXY_URL = "https://wsrv.nl";
@@ -55,9 +56,26 @@ export async function fetchRepoTree(
     try {
       const response = await fetch(
         `https://api.github.com/repos/${engine.repoOwner}/${engine.repoName}/git/trees/${engine.treeSha}?recursive=1`,
+        { headers: getAuthHeaders() }
       );
 
+      // Parse rate limit info from headers and save to shared storage
+      const rateLimitInfo = parseRateLimitFromHeaders(response.headers);
+      if (rateLimitInfo) {
+        saveRateLimitInfo(rateLimitInfo);
+      }
+
       if (!response.ok) {
+        if (response.status === 403) {
+          // Check if it's a rate limit error
+          const errorData = await response.json().catch(() => ({}));
+          if (errorData.message && errorData.message.includes('rate limit')) {
+            throw new Error(
+              `GitHub API rate limit exceeded. ${rateLimitInfo ? `Limit resets in ${Math.ceil((rateLimitInfo.reset * 1000 - Date.now()) / 60000)} minutes.` : 'Please try again later or add a GitHub token.'}`
+            );
+          }
+          throw new Error('Access forbidden. Repository may be private or unavailable.');
+        }
         throw new Error(
           `Failed to fetch repository tree: ${response.statusText}`,
         );
@@ -326,7 +344,13 @@ export async function fetchBranchSHA(
 ): Promise<string> {
   // First check if the repository exists
   const repoUrl = `https://api.github.com/repos/${repoOwner}/${repoName}`;
-  const repoResponse = await fetch(repoUrl);
+  const repoResponse = await fetch(repoUrl, { headers: getAuthHeaders() });
+
+  // Parse rate limit
+  const rateLimitInfo = parseRateLimitFromHeaders(repoResponse.headers);
+  if (rateLimitInfo) {
+    cachedRateLimitInfo = rateLimitInfo;
+  }
 
   if (!repoResponse.ok) {
     if (repoResponse.status === 404) {
@@ -335,6 +359,10 @@ export async function fetchBranchSHA(
       );
     }
     if (repoResponse.status === 403) {
+      const errorData = await repoResponse.json().catch(() => ({}));
+      if (errorData.message && errorData.message.includes('rate limit')) {
+        throw new Error('GitHub API rate limit exceeded. Please add a GitHub token in settings.');
+      }
       throw new Error('GitHub API rate limit exceeded. Please try again later.');
     }
     throw new Error(`Failed to access repository: ${repoResponse.statusText}`);
@@ -342,7 +370,13 @@ export async function fetchBranchSHA(
 
   // Then check if the branch exists
   const branchUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/branches/${branch}`;
-  const branchResponse = await fetch(branchUrl);
+  const branchResponse = await fetch(branchUrl, { headers: getAuthHeaders() });
+
+  // Parse rate limit
+  const branchRateLimitInfo = parseRateLimitFromHeaders(branchResponse.headers);
+  if (branchRateLimitInfo) {
+    cachedRateLimitInfo = branchRateLimitInfo;
+  }
 
   if (!branchResponse.ok) {
     if (branchResponse.status === 404) {
@@ -351,7 +385,7 @@ export async function fetchBranchSHA(
       );
     }
     if (branchResponse.status === 403) {
-      throw new Error('GitHub API rate limit exceeded. Please try again later.');
+      throw new Error('GitHub API rate limit exceeded. Please add a GitHub token in settings.');
     }
     throw new Error(`Failed to fetch branch info: ${branchResponse.statusText}`);
   }
@@ -387,7 +421,7 @@ export async function validateRepository(
  */
 export async function fetchUserAvatar(username: string): Promise<string> {
   const url = `https://api.github.com/users/${username}`;
-  const response = await fetch(url);
+  const response = await fetch(url, { headers: getAuthHeaders() });
 
   if (!response.ok) {
     // Return a fallback avatar if fetch fails
@@ -396,4 +430,11 @@ export async function fetchUserAvatar(username: string): Promise<string> {
 
   const data = await response.json();
   return data.avatar_url || `https://github.com/${username}.png`;
+}
+
+/**
+ * Get cached rate limit info (from shared storage in github-token.ts)
+ */
+export function getCachedRateLimitInfo(): RateLimitInfo | null {
+  return getStoredRateLimitInfo();
 }

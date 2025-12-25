@@ -2,18 +2,20 @@ import { useState, useMemo } from 'react';
 import { X, Plus, Check, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from './Button';
 import { AddEngineForm } from './AddEngineForm';
+import { GitHubTokenSettings } from './GitHubTokenSettings';
 import { cn } from '../lib/utils';
 import { useEngine } from '../contexts/EngineContext';
 
 interface EnginesModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onTokenChanged?: () => void;
 }
 
 const CUSTOM_ENGINES_PER_PAGE = 10;
 const SUPPORTED_ENGINES_PER_PAGE = 6; // 3x2 grid for testing
 
-export function EnginesModal({ isOpen, onClose }: EnginesModalProps) {
+export function EnginesModal({ isOpen, onClose, onTokenChanged }: EnginesModalProps) {
   const { activeEngine, allEngines, switchEngine, removeEngine, refreshEngines } = useEngine();
   const [showAddForm, setShowAddForm] = useState(false);
   const [switching, setSwitching] = useState<string | null>(null);
@@ -272,6 +274,12 @@ export function EnginesModal({ isOpen, onClose }: EnginesModalProps) {
             />
           ) : (
             <div className="space-y-6">
+              {/* GitHub Token Settings */}
+              <GitHubTokenSettings onTokenChanged={() => {
+                refreshEngines();
+                onTokenChanged?.();
+              }} />
+
               {/* Supported Engines Section */}
               {defaultEngines.length > 0 && (
                 <div>

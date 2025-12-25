@@ -3,7 +3,9 @@ import { cn } from "../lib/utils";
 import { Layers, Moon, Sun, X } from "lucide-react";
 import { Button } from "./Button";
 import { CategoryTreeItem } from "./CategoryTreeItem";
+import { RateLimitIndicator } from "./RateLimitIndicator";
 import type { Theme } from "../hooks/useTheme";
+import type { RateLimitInfo } from "../lib/github-token";
 
 interface SidebarProps {
   categories: Category[];
@@ -17,6 +19,7 @@ interface SidebarProps {
   onToggleExpand: (fullPath: string) => void;
   isMobile?: boolean;
   onClose?: () => void;
+  rateLimitInfo?: RateLimitInfo | null;
 }
 
 export function Sidebar({
@@ -31,6 +34,7 @@ export function Sidebar({
   onToggleExpand,
   isMobile = false,
   onClose,
+  rateLimitInfo,
 }: SidebarProps) {
   // Calculate total count from tree or fallback to categories
   const totalCount = categoryTree.length > 0
@@ -138,28 +142,34 @@ export function Sidebar({
       </div>
 
       {/* Footer */}
-      <div className="p-4 border-t border-border text-xs">
-        <div className="flex items-center gap-2 mb-2">
-          {activeEngine.avatarUrl && (
-            <img
-              src={activeEngine.avatarUrl}
-              alt={`${activeEngine.repoOwner} avatar`}
-              className="w-6 h-6 rounded-full"
-            />
-          )}
-          <span className="font-medium text-foreground truncate">
-            {activeEngine.name}
-          </span>
+      <div className="p-4 border-t border-border text-xs space-y-3">
+        {/* Rate Limit Indicator */}
+        {rateLimitInfo && <RateLimitIndicator rateLimitInfo={rateLimitInfo} />}
+        
+        {/* Engine Info */}
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            {activeEngine.avatarUrl && (
+              <img
+                src={activeEngine.avatarUrl}
+                alt={`${activeEngine.repoOwner} avatar`}
+                className="w-6 h-6 rounded-full"
+              />
+            )}
+            <span className="font-medium text-foreground truncate">
+              {activeEngine.name}
+            </span>
+          </div>
+          <a
+            href={`https://github.com/${activeEngine.repoOwner}/${activeEngine.repoName}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-muted-foreground hover:text-foreground transition-colors"
+            title="View on GitHub"
+          >
+            View on GitHub →
+          </a>
         </div>
-        <a
-          href={`https://github.com/${activeEngine.repoOwner}/${activeEngine.repoName}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-muted-foreground hover:text-foreground transition-colors"
-          title="View on GitHub"
-        >
-          View on GitHub →
-        </a>
       </div>
     </aside>
   );
