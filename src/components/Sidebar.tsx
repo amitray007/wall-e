@@ -20,6 +20,7 @@ interface SidebarProps {
   isMobile?: boolean;
   onClose?: () => void;
   rateLimitInfo?: RateLimitInfo | null;
+  onOpenSettings?: () => void;
 }
 
 export function Sidebar({
@@ -35,6 +36,7 @@ export function Sidebar({
   isMobile = false,
   onClose,
   rateLimitInfo,
+  onOpenSettings,
 }: SidebarProps) {
   // Calculate total count from tree or fallback to categories
   const totalCount = categoryTree.length > 0
@@ -144,7 +146,7 @@ export function Sidebar({
       {/* Footer */}
       <div className="p-4 border-t border-border text-xs space-y-3">
         {/* Rate Limit Indicator */}
-        {rateLimitInfo && <RateLimitIndicator rateLimitInfo={rateLimitInfo} />}
+        {rateLimitInfo && <RateLimitIndicator rateLimitInfo={rateLimitInfo} onOpenSettings={onOpenSettings} />}
         
         {/* Engine Info */}
         <div>

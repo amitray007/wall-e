@@ -1,26 +1,37 @@
-import { useState, useMemo } from 'react';
-import { X, Plus, Check, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { X, Plus, Check, Trash2, ChevronLeft, ChevronRight, Settings, Layers } from 'lucide-react';
 import { Button } from './Button';
 import { AddEngineForm } from './AddEngineForm';
 import { GitHubTokenSettings } from './GitHubTokenSettings';
 import { cn } from '../lib/utils';
 import { useEngine } from '../contexts/EngineContext';
 
+export type ModalTab = 'engines' | 'settings';
+
 interface EnginesModalProps {
   isOpen: boolean;
   onClose: () => void;
   onTokenChanged?: () => void;
+  initialTab?: ModalTab;
 }
 
 const CUSTOM_ENGINES_PER_PAGE = 10;
 const SUPPORTED_ENGINES_PER_PAGE = 6; // 3x2 grid for testing
 
-export function EnginesModal({ isOpen, onClose, onTokenChanged }: EnginesModalProps) {
+export function EnginesModal({ isOpen, onClose, onTokenChanged, initialTab = 'engines' }: EnginesModalProps) {
   const { activeEngine, allEngines, switchEngine, removeEngine, refreshEngines } = useEngine();
+  const [activeTab, setActiveTab] = useState<ModalTab>(initialTab);
   const [showAddForm, setShowAddForm] = useState(false);
   const [switching, setSwitching] = useState<string | null>(null);
   const [customPage, setCustomPage] = useState(0);
   const [supportedPage, setSupportedPage] = useState(0);
+
+  // Sync activeTab with initialTab when modal opens or initialTab changes
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab(initialTab);
+    }
+  }, [isOpen, initialTab]);
 
   // Separate default and custom engines
   const defaultEngines = useMemo(() => allEngines.filter(e => e.isDefault), [allEngines]);
@@ -252,34 +263,70 @@ export function EnginesModal({ isOpen, onClose, onTokenChanged }: EnginesModalPr
         className="bg-card rounded-lg shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col border border-border"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <div>
-            <h2 className="text-lg font-bold">Engines</h2>
-            <p className="text-xs text-muted-foreground">
-              {defaultEngines.length} supported • {customEngines.length} custom
-            </p>
+        {/* Header with Tabs */}
+        <div className="border-b border-border">
+          <div className="flex items-center justify-between px-4 pt-4 pb-0">
+            <div className="flex items-center gap-1">
+              {/* Engines Tab */}
+              <button
+                onClick={() => setActiveTab('engines')}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-md transition-colors',
+                  activeTab === 'engines'
+                    ? 'bg-background text-foreground border-t border-l border-r border-border -mb-px'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                )}
+              >
+                <Layers className="w-4 h-4" />
+                Engines
+                <span className="text-xs text-muted-foreground ml-1">
+                  ({allEngines.length})
+                </span>
+              </button>
+              
+              {/* Settings Tab */}
+              <button
+                onClick={() => setActiveTab('settings')}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-md transition-colors',
+                  activeTab === 'settings'
+                    ? 'bg-background text-foreground border-t border-l border-r border-border -mb-px'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                )}
+              >
+                <Settings className="w-4 h-4" />
+                Settings
+              </button>
+            </div>
+            
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="w-5 h-5" />
+            </Button>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="w-5 h-5" />
-          </Button>
         </div>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">
-          {showAddForm ? (
-            <AddEngineForm
-              onSuccess={handleAddSuccess}
-              onCancel={() => setShowAddForm(false)}
-            />
-          ) : (
+          {/* Settings Tab Content */}
+          {activeTab === 'settings' && (
             <div className="space-y-6">
-              {/* GitHub Token Settings */}
               <GitHubTokenSettings onTokenChanged={() => {
                 refreshEngines();
                 onTokenChanged?.();
               }} />
+            </div>
+          )}
 
+          {/* Engines Tab Content */}
+          {activeTab === 'engines' && (
+            <>
+              {showAddForm ? (
+                <AddEngineForm
+                  onSuccess={handleAddSuccess}
+                  onCancel={() => setShowAddForm(false)}
+                />
+              ) : (
+                <div className="space-y-6">
               {/* Supported Engines Section */}
               {defaultEngines.length > 0 && (
                 <div>
@@ -376,6 +423,8 @@ export function EnginesModal({ isOpen, onClose, onTokenChanged }: EnginesModalPr
                 <span className="font-medium">Add Custom Engine</span>
               </button>
             </div>
+              )}
+            </>
           )}
         </div>
       </div>

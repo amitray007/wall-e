@@ -1,12 +1,13 @@
-import { Activity, AlertTriangle } from 'lucide-react';
+import { Activity, AlertTriangle, ArrowUpRight } from 'lucide-react';
 import type { RateLimitInfo } from '../lib/github-token';
 import { hasGitHubToken } from '../lib/github-token';
 
 interface RateLimitIndicatorProps {
   rateLimitInfo: RateLimitInfo | null;
+  onOpenSettings?: () => void;
 }
 
-export function RateLimitIndicator({ rateLimitInfo }: RateLimitIndicatorProps) {
+export function RateLimitIndicator({ rateLimitInfo, onOpenSettings }: RateLimitIndicatorProps) {
   if (!rateLimitInfo) return null;
 
   const percentage = (rateLimitInfo.remaining / rateLimitInfo.limit) * 100;
@@ -14,7 +15,7 @@ export function RateLimitIndicator({ rateLimitInfo }: RateLimitIndicatorProps) {
   const isAuthenticated = hasGitHubToken();
 
   return (
-    <div className="text-xs space-y-1">
+    <div className="text-xs space-y-1.5">
       <div className="flex items-center justify-between text-muted-foreground">
         <span className="flex items-center gap-1">
           {isLow ? (
@@ -39,9 +40,21 @@ export function RateLimitIndicator({ rateLimitInfo }: RateLimitIndicatorProps) {
         />
       </div>
 
-      {!isAuthenticated && isLow && (
+      {/* Increase limit link - always show if not authenticated */}
+      {!isAuthenticated && (
+        <button
+          onClick={onOpenSettings}
+          className="flex items-center gap-1 text-[10px] text-primary hover:text-primary/80 hover:underline transition-colors w-full"
+        >
+          <ArrowUpRight className="w-3 h-3" />
+          <span>Increase API Limit</span>
+        </button>
+      )}
+
+      {/* Low limit warning for authenticated users */}
+      {isAuthenticated && isLow && (
         <p className="text-yellow-600 dark:text-yellow-500 text-[10px]">
-          Add token in Settings for higher limit
+          Rate limit running low
         </p>
       )}
     </div>

@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useMemo, useRef, lazy, Suspense, useCallback } from 'react';
 import UmamiAnalytics from '@danielgtmn/umami-react';
 import type { WallpaperImage, Category, CategoryNode, ThumbnailSize, SortOption, Engine } from './types';
 import { getAllImages, getCategories, getCategoryTree, getCachedRateLimitInfo } from './lib/github-api';
 import { fetchRateLimitInfo } from './lib/github-token';
 import type { RateLimitInfo } from './lib/github-token';
+import type { ModalTab } from './components/EnginesModal';
 import { flattenCategoryPaths } from './lib/category-tree';
 import { useTheme } from './hooks/useTheme';
 import { useInfiniteScroll } from './hooks/useInfiniteScroll';
@@ -39,6 +40,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showEnginesModal, setShowEnginesModal] = useState(false);
+  const [enginesModalTab, setEnginesModalTab] = useState<ModalTab>('engines');
   const [urlEngineError, setUrlEngineError] = useState<string | null>(null);
   const [showUrlBanner, setShowUrlBanner] = useState(false);
   const [urlLoadedEngine, setUrlLoadedEngine] = useState<Engine | null>(null);
@@ -130,6 +132,17 @@ function App() {
       setRateLimitInfo(updatedInfo);
     }
   };
+
+  // Open engines modal with specific tab
+  const openEnginesModal = useCallback((tab: ModalTab = 'engines') => {
+    setEnginesModalTab(tab);
+    setShowEnginesModal(true);
+  }, []);
+
+  // Open settings tab directly (used by RateLimitIndicator)
+  const openSettings = useCallback(() => {
+    openEnginesModal('settings');
+  }, [openEnginesModal]);
 
   // Close sort dropdown when clicking outside
   useEffect(() => {
@@ -446,6 +459,7 @@ function App() {
           expandedCategories={expandedCategories}
           onToggleExpand={toggleExpand}
           rateLimitInfo={rateLimitInfo}
+          onOpenSettings={openSettings}
         />
       </div>
 
@@ -470,6 +484,7 @@ function App() {
               isMobile={true}
               onClose={() => setIsMobileSidebarOpen(false)}
               rateLimitInfo={rateLimitInfo}
+              onOpenSettings={openSettings}
             />
           </div>
         </div>
@@ -605,7 +620,7 @@ function App() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setShowEnginesModal(true)}
+                  onClick={() => openEnginesModal('engines')}
                   title="Engines"
                   className="h-8 w-8"
                 >
@@ -689,7 +704,7 @@ function App() {
                           variant="ghost"
                           className="w-full justify-start"
                           onClick={() => {
-                            setShowEnginesModal(true);
+                            openEnginesModal('engines');
                             setShowMobileOverflowMenu(false);
                           }}
                         >
@@ -765,6 +780,7 @@ function App() {
             isOpen={showEnginesModal}
             onClose={() => setShowEnginesModal(false)}
             onTokenChanged={refreshRateLimitInfo}
+            initialTab={enginesModalTab}
           />
         </Suspense>
       )}
