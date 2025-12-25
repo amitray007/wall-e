@@ -54,6 +54,28 @@ function setDontShowAgainTimestamp(): void {
 /**
  * Hook to manage engine discovery popup visibility and suggestions
  */
+/**
+ * Fisher-Yates shuffle with seed for consistent but different results each time
+ */
+function shuffleArray<T>(array: T[], seed: number): T[] {
+  const result = [...array];
+  let currentIndex = result.length;
+  
+  // Simple seeded random number generator
+  const seededRandom = () => {
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    return seed / 0x7fffffff;
+  };
+
+  while (currentIndex > 0) {
+    const randomIndex = Math.floor(seededRandom() * currentIndex);
+    currentIndex--;
+    [result[currentIndex], result[randomIndex]] = [result[randomIndex], result[currentIndex]];
+  }
+
+  return result;
+}
+
 export function useEngineDiscoveryPopup({
   scrollCount,
   activeEngineId,
@@ -62,15 +84,16 @@ export function useEngineDiscoveryPopup({
   const [isVisible, setIsVisible] = useState(false);
   const [lastShownAtScroll, setLastShownAtScroll] = useState(0);
   const [isDontShowAgain, setIsDontShowAgain] = useState(() => isDontShowAgainActive());
+  const [shuffleSeed, setShuffleSeed] = useState(() => Date.now());
 
-  // Get suggested engines (excluding active engine)
+  // Get suggested engines (excluding active engine) - reshuffles each time shuffleSeed changes
   const suggestedEngines = useMemo(() => {
     const otherEngines = allEngines.filter(e => e.id !== activeEngineId);
     
-    // Shuffle and take first N engines
-    const shuffled = [...otherEngines].sort(() => Math.random() - 0.5);
+    // Shuffle using seed and take first N engines
+    const shuffled = shuffleArray(otherEngines, shuffleSeed);
     return shuffled.slice(0, SUGGESTED_ENGINES_COUNT);
-  }, [allEngines, activeEngineId]);
+  }, [allEngines, activeEngineId, shuffleSeed]);
 
   // Check if popup should show based on scroll count
   useEffect(() => {
@@ -78,18 +101,20 @@ export function useEngineDiscoveryPopup({
     if (isDontShowAgain) return;
 
     // Don't show if no other engines available
-    if (suggestedEngines.length === 0) return;
+    if (allEngines.filter(e => e.id !== activeEngineId).length === 0) return;
 
     // Check if we've hit a trigger point (every N scrolls)
     // scrollCount starts at 0, so we trigger at 5, 10, 15, etc.
     if (scrollCount > 0 && scrollCount % SCROLL_TRIGGER_INTERVAL === 0) {
       // Only show if this is a new trigger (not the same scroll count we already showed for)
       if (scrollCount !== lastShownAtScroll) {
+        // Generate new shuffle seed for fresh random selection
+        setShuffleSeed(Date.now() + Math.random() * 1000);
         setIsVisible(true);
         setLastShownAtScroll(scrollCount);
       }
     }
-  }, [scrollCount, isDontShowAgain, suggestedEngines.length, lastShownAtScroll]);
+  }, [scrollCount, isDontShowAgain, allEngines, activeEngineId, lastShownAtScroll]);
 
   // Reset visibility when active engine changes
   useEffect(() => {
