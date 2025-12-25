@@ -148,7 +148,7 @@ export function Sidebar({
       {/* Footer */}
       <div className="p-4 border-t border-border text-xs space-y-3">
         {/* Rate Limit Indicator */}
-        <RateLimitIndicator rateLimitInfo={rateLimitInfo} loading={rateLimitLoading} onOpenSettings={onOpenSettings} />
+        <RateLimitIndicator rateLimitInfo={rateLimitInfo ?? null} loading={rateLimitLoading} onOpenSettings={onOpenSettings} />
         
         {/* Engine Info */}
         <div>

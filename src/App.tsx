@@ -11,6 +11,7 @@ import { useExpandedCategories } from './hooks/useExpandedCategories';
 import { useEngine } from './contexts/EngineContext';
 import { useUrlEngine } from './hooks/useUrlEngine';
 import { updateUrlWithEngine } from './lib/url-params';
+import { useEngineDiscoveryPopup } from './hooks/useEngineDiscoveryPopup';
 import { Sidebar } from './components/Sidebar';
 import { SearchBar } from './components/SearchBar';
 import { VirtualMasonryGallery } from './components/VirtualMasonryGallery';
@@ -19,6 +20,8 @@ import { GallerySkeleton } from './components/GallerySkeleton';
 import { ModalSkeleton } from './components/ModalSkeleton';
 import { UrlEngineBanner } from './components/UrlEngineBanner';
 import { RateLimitError } from './components/RateLimitError';
+import { EngineDiscoveryPopup } from './components/EngineDiscoveryPopup';
+import { EndOfGalleryShowcase } from './components/EndOfGalleryShowcase';
 import { AlertCircle, Library, Grid3x3, Grid2x2, LayoutGrid, ArrowUpDown, Menu, MoreVertical } from 'lucide-react';
 import { Button } from './components/Button';
 
@@ -61,6 +64,7 @@ function App() {
   const [showMobileOverflowMenu, setShowMobileOverflowMenu] = useState(false);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
   const mobileOverflowRef = useRef<HTMLDivElement>(null);
+  const [scrollCount, setScrollCount] = useState(0);
 
   // Handle URL-based engine loading
   const urlEngineState = useUrlEngine({
@@ -358,6 +362,29 @@ function App() {
     allImages: filteredImages,
     pageSize: 20
   });
+
+  // Wrap fetchMore to track scroll count for discovery popup
+  const handleFetchMore = useCallback(() => {
+    setScrollCount(c => c + 1);
+    fetchMore();
+  }, [fetchMore]);
+
+  // Engine discovery popup
+  const {
+    showPopup: showDiscoveryPopup,
+    suggestedEngines,
+    dismissPopup: dismissDiscoveryPopup,
+    dontShowAgain: dontShowDiscoveryAgain,
+  } = useEngineDiscoveryPopup({
+    scrollCount,
+    activeEngineId: activeEngine.id,
+    allEngines,
+  });
+
+  // Reset scroll count when engine or filters change
+  useEffect(() => {
+    setScrollCount(0);
+  }, [activeEngine.id, selectedCategory, searchQuery]);
 
   // Download handler
   const handleDownload = async (image: WallpaperImage) => {
@@ -766,9 +793,19 @@ function App() {
               thumbnailSize={thumbnailSize}
             />
             <InfiniteScrollTrigger
-              onIntersect={fetchMore}
+              onIntersect={handleFetchMore}
               hasMore={hasMore}
             />
+            {/* End of gallery showcase */}
+            {!hasMore && displayedImages.length > 0 && (
+              <EndOfGalleryShowcase
+                currentEngine={activeEngine}
+                allEngines={allEngines}
+                onEngineSelect={(engineId) => switchEngine(engineId)}
+                onViewAll={() => setShowEnginesModal(true)}
+                totalImages={filteredImages.length}
+              />
+            )}
           </>
         )}
       </main>
@@ -805,12 +842,26 @@ function App() {
         </Suspense>
       )}
 
-      {/* URL Engine Banner - Bottom left corner */}
+      {/* URL Engine Banner - Bottom right corner */}
       {showUrlBanner && urlLoadedEngine && (
         <UrlEngineBanner
           engine={urlLoadedEngine}
           onSave={handleSaveUrlEngine}
           onDismiss={() => setShowUrlBanner(false)}
+        />
+      )}
+
+      {/* Engine Discovery Popup - Bottom right corner */}
+      {showDiscoveryPopup && !showUrlBanner && (
+        <EngineDiscoveryPopup
+          engines={suggestedEngines}
+          onEngineSelect={(engineId) => switchEngine(engineId)}
+          onDismiss={dismissDiscoveryPopup}
+          onDontShowAgain={dontShowDiscoveryAgain}
+          onViewAll={() => {
+            dismissDiscoveryPopup();
+            setShowEnginesModal(true);
+          }}
         />
       )}
     </div>

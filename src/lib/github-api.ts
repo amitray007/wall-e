@@ -349,7 +349,7 @@ export async function fetchBranchSHA(
   // Parse rate limit
   const rateLimitInfo = parseRateLimitFromHeaders(repoResponse.headers);
   if (rateLimitInfo) {
-    cachedRateLimitInfo = rateLimitInfo;
+    saveRateLimitInfo(rateLimitInfo);
   }
 
   if (!repoResponse.ok) {
@@ -375,7 +375,7 @@ export async function fetchBranchSHA(
   // Parse rate limit
   const branchRateLimitInfo = parseRateLimitFromHeaders(branchResponse.headers);
   if (branchRateLimitInfo) {
-    cachedRateLimitInfo = branchRateLimitInfo;
+    saveRateLimitInfo(branchRateLimitInfo);
   }
 
   if (!branchResponse.ok) {
