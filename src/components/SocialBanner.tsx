@@ -36,7 +36,7 @@ function GitHubIcon({ className }: { className?: string }) {
 export function SocialBanner({ hasPopupBelow = false }: SocialBannerProps) {
   return (
     <div
-      className={`fixed right-4 z-40 transition-all duration-300 ease-out flex items-center gap-2 md:top-4 md:bottom-auto ${
+      className={`fixed right-4 z-40 transition-all duration-300 ease-out flex items-center gap-2 lg:top-4 lg:bottom-auto ${
         hasPopupBelow ? 'bottom-[220px]' : 'bottom-4'
       }`}
     >
