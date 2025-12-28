@@ -45,15 +45,15 @@ export function SocialBanner({ hasPopupBelow = false }: SocialBannerProps) {
         href="https://github.com/amitray007/wall-e"
         target="_blank"
         rel="noopener noreferrer"
-        className="group flex items-center gap-2 px-3 py-2 bg-background/95 backdrop-blur-md border border-border rounded-full shadow-lg hover:shadow-xl hover:border-yellow-500/50 transition-all duration-200"
+        className="group flex items-center gap-1.5 px-2.5 py-1.5 bg-background/95 backdrop-blur-md border border-border rounded-full shadow-lg hover:shadow-xl hover:border-yellow-500/50 transition-all duration-200"
         title="Star on GitHub"
         aria-label="Star WALL·E Gallery on GitHub"
       >
-        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-foreground text-background group-hover:scale-110 transition-transform">
-          <GitHubIcon className="w-4 h-4" />
+        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-foreground text-background group-hover:scale-110 transition-transform">
+          <GitHubIcon className="w-3.5 h-3.5" />
         </div>
-        <Star className="w-4 h-4 text-yellow-500 hidden sm:block" />
-        <span className="text-sm font-medium pr-1 hidden sm:inline">
+        <Star className="w-3.5 h-3.5 text-yellow-500 hidden sm:block" />
+        <span className="text-xs font-medium pr-0.5 hidden sm:inline">
           Star
         </span>
       </a>
@@ -63,14 +63,14 @@ export function SocialBanner({ hasPopupBelow = false }: SocialBannerProps) {
         href="https://x.com/Niyxuis"
         target="_blank"
         rel="noopener noreferrer"
-        className="group flex items-center gap-2 px-3 py-2 bg-background/95 backdrop-blur-md border border-border rounded-full shadow-lg hover:shadow-xl hover:border-primary/50 transition-all duration-200"
+        className="group flex items-center gap-1.5 px-2.5 py-1.5 bg-background/95 backdrop-blur-md border border-border rounded-full shadow-lg hover:shadow-xl hover:border-primary/50 transition-all duration-200"
         title="Follow on X"
         aria-label="Follow @Niyxuis on X"
       >
-        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-foreground text-background group-hover:scale-110 transition-transform">
-          <XIcon className="w-4 h-4" />
+        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-foreground text-background group-hover:scale-110 transition-transform">
+          <XIcon className="w-3.5 h-3.5" />
         </div>
-        <span className="text-sm font-medium pr-1 hidden sm:inline">
+        <span className="text-xs font-medium pr-0.5 hidden sm:inline">
           Follow
         </span>
       </a>
