@@ -12,6 +12,16 @@ RUN npm ci
 # Copy source files
 COPY . .
 
+# Build arguments for Vite (embedded at build time)
+ARG VITE_UMAMI_URL
+ARG VITE_UMAMI_ID
+ARG VITE_ENABLE_ANALYTICS
+
+# Make build args available as env vars during build
+ENV VITE_UMAMI_URL=$VITE_UMAMI_URL
+ENV VITE_UMAMI_ID=$VITE_UMAMI_ID
+ENV VITE_ENABLE_ANALYTICS=$VITE_ENABLE_ANALYTICS
+
 # Build the application
 RUN npm run build
 
