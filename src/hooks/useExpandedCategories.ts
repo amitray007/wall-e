@@ -28,9 +28,6 @@ export function cleanupStaleExpandedCategories(existingEngineIds: string[]): voi
       localStorage.removeItem(key);
     });
     
-    if (keysToRemove.length > 0) {
-      console.log(`Cleaned up ${keysToRemove.length} stale expanded-categories entries`);
-    }
   } catch (error) {
     console.error('Failed to cleanup stale expanded categories:', error);
   }
