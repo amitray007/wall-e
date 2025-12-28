@@ -1,7 +1,7 @@
 import { Star } from 'lucide-react';
 
 interface SocialBannerProps {
-  /** Whether another popup is showing (shifts this banner up) */
+  /** Whether another popup is showing (shifts this banner up on mobile) */
   hasPopupBelow?: boolean;
 }
 
@@ -36,7 +36,7 @@ function GitHubIcon({ className }: { className?: string }) {
 export function SocialBanner({ hasPopupBelow = false }: SocialBannerProps) {
   return (
     <div
-      className={`fixed right-4 z-40 transition-all duration-300 ease-out flex items-center gap-2 ${
+      className={`fixed right-4 z-40 transition-all duration-300 ease-out flex items-center gap-2 md:top-4 md:bottom-auto ${
         hasPopupBelow ? 'bottom-[220px]' : 'bottom-4'
       }`}
     >
