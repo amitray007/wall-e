@@ -510,11 +510,11 @@ function App() {
 
   return (
     <div className="flex h-screen bg-background">
-      {/* Analytics */}
-      {isAnalyticsEnabled && (
+      {/* Analytics - only loads if env vars are configured */}
+      {isAnalyticsEnabled && import.meta.env.VITE_UMAMI_URL && import.meta.env.VITE_UMAMI_ID && (
         <UmamiAnalytics
-          url={import.meta.env.VITE_UMAMI_URL || 'https://um.kairo.click'}
-          websiteId={import.meta.env.VITE_UMAMI_ID || 'e1767cc6-3e0b-4ab0-b1fe-701b92a8741e'}
+          url={import.meta.env.VITE_UMAMI_URL}
+          websiteId={import.meta.env.VITE_UMAMI_ID}
           lazyLoad={true}
         />
       )}
