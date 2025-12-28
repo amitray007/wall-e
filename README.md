@@ -4,6 +4,7 @@
 
 **Browse beautiful wallpapers from GitHub repositories with lightning-fast performance and elegant design**
 
+[![Live Demo](https://img.shields.io/badge/Live-Demo-success?logo=vercel&logoColor=white)](https://walle.theblank.club)
 [![React](https://img.shields.io/badge/React-19-61dafb?logo=react&logoColor=white)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Vite](https://img.shields.io/badge/Vite-7.1-646cff?logo=vite&logoColor=white)](https://vitejs.dev)
@@ -20,7 +21,7 @@
 
 ### 🎨 Multi-Source Support
 - **Multiple Engines** - Browse wallpapers from any public GitHub repository
-- **3 Built-in Collections** - Pre-configured repositories with thousands of wallpapers
+- **11 Built-in Collections** - Pre-configured repositories with thousands of wallpapers
 - **Custom Engines** - Add your own favorite wallpaper repositories
 - **Easy Switching** - Seamlessly switch between different wallpaper sources
 
@@ -176,6 +177,14 @@ Works on all modern browsers supporting:
 - CSS Grid and Flexbox
 - Intersection Observer API
 - WebP image format
+
+## 🤝 Contributing
+
+Contributions are welcome! Please read our [Contributing Guide](./CONTRIBUTING.md) for details on:
+
+- Setting up the development environment
+- Code style guidelines
+- Pull request process
 
 ## 📄 License
 
